@@ -1,0 +1,2 @@
+# Hashes of file build rules.
+29ebbc3d8c455b77c8e0b0b9d3ca86f6 ClearHost_artefacts/JuceLibraryCode/JuceHeader.h

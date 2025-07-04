@@ -1,0 +1,2 @@
+UseNewRTSE=1
+SourcePath=/Users/changhunsung/projects/goyo-plugin/Source/Shader

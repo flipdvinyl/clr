@@ -1,0 +1,3 @@
+/Users/d/JUCEClearHost/build/CMakeFiles/ClearHost.dir
+/Users/d/JUCEClearHost/build/CMakeFiles/edit_cache.dir
+/Users/d/JUCEClearHost/build/CMakeFiles/rebuild_cache.dir
