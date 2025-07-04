@@ -1,29 +1,33 @@
 #include <JuceHeader.h>
 
-class ClearHostApp : public juce::AudioAppComponent, public juce::AudioProcessorPlayer, public juce::Slider::Listener, public juce::AudioProcessorListener, public juce::ComboBox::Listener, public juce::Button::Listener, public juce::Timer {
+class ClearHostApp : public juce::AudioAppComponent, public juce::AudioProcessorPlayer, public juce::AudioProcessorListener, public juce::Slider::Listener, public juce::ComboBox::Listener, public juce::Button::Listener, public juce::Timer {
 public:
     ClearHostApp() {
-            // 애니메이션 설정
-    animationDuration = 1.0; // 1초 (초기 변수)
-    animationTimerInterval = 16; // 60fps (16ms 간격)
-    
-    // 시스템 사운드 출력 소스 저장 변수 초기화
-    originalSystemOutputDevice = "";
-    
-    // 자동 초기 설정
-    performAutoSetup();
-        
+        animationDuration = 1.0;
+        animationTimerInterval = 16;
+        originalSystemOutputDevice = "";
+        performAutoSetup();
         pluginManager.addDefaultFormats();
         loadClearVST3();
-        
-        // 오디오 채널 설정 - BlackHole은 보통 스테레오 출력을 제공
-        setAudioChannels(2, 2); // stereo in, stereo out for BlackHole compatibility
+        setAudioChannels(2, 2);
         auto midiInputs = juce::MidiInput::getAvailableDevices();
         if (!midiInputs.isEmpty()) {
             midiInput = juce::MidiInput::openDevice(midiInputs[0].identifier, this);
             if (midiInput) midiInput->start();
         }
         setProcessor(clearPlugin.get());
+        // 플러그인 에디터만 addAndMakeVisible
+        if (clearPlugin) {
+            pluginEditor.reset(clearPlugin->createEditor());
+            if (pluginEditor) {
+                addAndMakeVisible(pluginEditor.get());
+            }
+            juce::Logger::writeToLog("Registering parameter listener...");
+            clearPlugin->addListener(this);
+            isAnimating = false;
+            startTimer(100); // 파라미터 동기화용
+        }
+        setSize(1200, 700);
         
         // 노브 컨트롤들 생성
         for (int i = 0; i < 3; ++i) {
@@ -33,7 +37,6 @@ public:
             knob->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
             knob->addListener(this);
             knobs.add(knob.release());
-            addAndMakeVisible(knobs.getLast());
         }
         
         // 프리셋 버튼들 생성
@@ -77,6 +80,10 @@ public:
         // 오디오 장치 목록 업데이트
         updateAudioDeviceLists();
         
+        // 드롭다운용 장치 리스트 초기화
+        updateInputDeviceList();
+        updateOutputDeviceList();
+        
         // 라벨 설정
         inputDeviceLabel.setText("Audio Input:", juce::dontSendNotification);
         inputDeviceLabel.setJustificationType(juce::Justification::centredLeft);
@@ -86,61 +93,35 @@ public:
         outputDeviceLabel.setJustificationType(juce::Justification::centredLeft);
         addAndMakeVisible(outputDeviceLabel);
         
-        if (clearPlugin) {
-            juce::Logger::writeToLog("Creating plugin editor...");
-            pluginEditor.reset(clearPlugin->createEditor());
-            if (pluginEditor) {
-                juce::Logger::writeToLog("Plugin editor created successfully");
-                juce::Logger::writeToLog("Editor size: " + juce::String(pluginEditor->getWidth()) + "x" + juce::String(pluginEditor->getHeight()));
-                addAndMakeVisible(pluginEditor.get());
-                
-                // Footer 영역 포함한 전체 크기 설정
-                int totalHeight = pluginEditor->getHeight() + 300; // Footer 300px 추가
-                setSize(pluginEditor->getWidth(), totalHeight);
-                
-                // 플러그인 파라미터 리스너 추가
-                clearPlugin->addListener(this);
-                
-                // Clear 플러그인의 모든 파라미터 이름과 값 출력
-                juce::Logger::writeToLog("=== Clear Plugin Parameters ===");
-                auto params = clearPlugin->getParameters();
-                for (int i = 0; i < params.size(); ++i) {
-                    if (params[i]) {
-                        juce::String paramName = params[i]->getName(100);
-                        float value = params[i]->getValue();
-                        juce::Logger::writeToLog("Parameter " + juce::String(i) + ": " + paramName + " = " + juce::String(value));
-                        
-                        // Voice Gain 관련 파라미터 찾기
-                        if (paramName.contains("Voice") && (paramName.contains("Gain") || paramName.contains("Level") || paramName.contains("Volume") || paramName.contains("Amount"))) {
-                            juce::Logger::writeToLog("*** FOUND VOICE GAIN: Parameter " + juce::String(i) + " = " + paramName + " ***");
-                        }
-                    }
-                }
-                juce::Logger::writeToLog("=== End Parameters ===");
-                
-                // 초기 노브 값들을 플러그인 파라미터와 동기화
-                updateKnobsFromPlugin();
-                
-                // Mono/Stereo 파라미터를 Stereo로 설정 (Parameter 13)
-                if (params.size() > 13 && params[13]) {
-                    params[13]->setValueNotifyingHost(1.0f); // Stereo = 1.0
-                    juce::Logger::writeToLog("Set Mono/Stereo parameter to Stereo (1.0)");
-                    
-                    // 스테레오/모노 버튼 초기 상태 설정
-                    if (stereoMonoButton) {
-                        stereoMonoButton->setButtonText("Stereo");
-                    }
-                }
-            } else {
-                juce::Logger::writeToLog("Failed to create plugin editor");
-                setSize(400, 500); // 기본 크기 + Footer
-            }
-        } else {
-            juce::Logger::writeToLog("No plugin loaded, setting default window size");
-            setSize(400, 500); // 기본 크기 + Footer
-        }
+        // 추가된 멤버 변수 초기화
+        knobRects.resize(3);
+        knobValues.resize(3);
+        buttonRects.resize(7); // 7개 버튼으로 확장
+        buttonLabels.resize(7);
+        stereoMonoRect = juce::Rectangle<int>();
+        inputDeviceRect = juce::Rectangle<int>();
+        outputDeviceRect = juce::Rectangle<int>();
+        draggingKnob = -1;
+        lastDragY = 0;
+        
+        // 드롭다운 관련 변수들
+        inputDropdownOpen = false;
+        outputDropdownOpen = false;
+        inputDeviceList.clear();
+        outputDeviceList.clear();
+        inputDropdownRect = juce::Rectangle<int>();
+        outputDropdownRect = juce::Rectangle<int>();
+        inputDeviceRects.clear();
+        outputDeviceRects.clear();
     }
     ~ClearHostApp() override {
+        if (clearPlugin) {
+            juce::Logger::writeToLog("Removing parameter listener...");
+            clearPlugin->removeListener(this);
+            clearPlugin = nullptr;
+        }
+        knobRects.clear();
+        knobValues.clear();
         if (midiInput) midiInput->stop();
         stopTimer();
         shutdownAudio();
@@ -184,68 +165,158 @@ public:
     void handleIncomingMidiMessage(juce::MidiInput*, const juce::MidiMessage& message) override {
         if (message.isController() && clearPlugin) mapMidiCCToClearParameter(message);
     }
+    void paint(juce::Graphics& g) override {
+        auto bounds = getLocalBounds();
+        int w = bounds.getWidth();
+        int h = bounds.getHeight();
+        int col1 = w * 0.25;
+        int col2 = w * 0.35;
+        int col3 = w - col1 - col2;
+        // 플러그인 관련 멤버 접근 전 nullptr/size 체크
+        if (knobRects.size() < 3 || knobValues.size() < 3) {
+            juce::Logger::writeToLog("paint: knobRects/knobValues size error");
+            return;
+        }
+        // 1단: 오렌지 배경
+        juce::Rectangle<int> leftArea(0, 0, col1, h);
+        g.setColour(juce::Colours::orange);
+        g.fillRect(leftArea);
+        // 좌상단 160x280 박스
+        juce::Rectangle<int> box(20, 20, 160, 280);
+        g.setColour(juce::Colours::darkgrey);
+        g.fillRect(box);
+        // 박스 중앙에 파란 원
+        int cx = box.getCentreX();
+        int cy = box.getCentreY();
+        int radius = 60;
+        g.setColour(juce::Colours::deepskyblue);
+        g.fillEllipse(cx - radius, cy - radius, radius * 2, radius * 2);
+        // 2단: 가운데 영역 (footer 내용)
+        juce::Rectangle<int> centerArea(col1, 0, col2, h);
+        g.setColour(juce::Colours::darkgrey.darker());
+        g.fillRect(centerArea);
+        // 노브 3개 (원)
+        int knobY = centerArea.getY() + 60;
+        for (int i = 0; i < 3; ++i) {
+            int knobX = centerArea.getX() + 60 + i * 160;
+            knobRects[i] = juce::Rectangle<int>(knobX, knobY, 80, 80);
+            g.setColour(juce::Colours::white);
+            g.drawEllipse(knobRects[i].toFloat(), 3.0f);
+            // 노브 인디케이터 (10시~2시, 값=0~1, min~max 시계 방향)
+            float v = knobValues[i];
+            float minAngle = juce::MathConstants<float>::pi * 5.0f/6.0f; // 10시
+            float maxAngle = juce::MathConstants<float>::pi * 13.0f/6.0f; // 2시 (시계 방향)
+            float angle = minAngle + v * (maxAngle - minAngle);
+            float cx = knobRects[i].getCentreX();
+            float cy = knobRects[i].getCentreY();
+            float r = 40.0f;
+            float ex = cx + std::cos(angle) * r;
+            float ey = cy + std::sin(angle) * r;
+            g.setColour(juce::Colours::deepskyblue);
+            g.drawLine(cx, cy, ex, ey, 4.0f);
+            g.setColour(juce::Colours::white);
+            g.drawText("Knob " + juce::String(i+1), knobX, knobY + 90, 80, 20, juce::Justification::centred);
+        }
+        // 프리셋 버튼 7개 (2줄)
+        int btnW = 100, btnH = 30, btnSpacing = 20;
+        int btnY1 = centerArea.getY() + 180;
+        int btnY2 = btnY1 + btnH + 10;
+        juce::String btnNames[7] = {"Bypass","S* up**","Too Loud","Silence","Clear Voice","Dry Voice","Vocal Reference"};
+        buttonRects.resize(7); // 7개 버튼으로 확장
+        for (int i = 0; i < 7; ++i) {
+            int row = i < 4 ? 0 : 1;
+            int col = row == 0 ? i : i-4;
+            int btnX = centerArea.getX() + 30 + col * (btnW + btnSpacing);
+            int btnY = row == 0 ? btnY1 : btnY2;
+            buttonRects[i] = juce::Rectangle<int>(btnX, btnY, btnW, btnH);
+            g.setColour(juce::Colours::grey);
+            g.fillRect(btnX, btnY, btnW, btnH);
+            g.setColour(juce::Colours::white);
+            g.drawText(btnNames[i], btnX, btnY, btnW, btnH, juce::Justification::centred);
+        }
+        // 스테레오/모노 버튼
+        int stereoY = btnY2 + btnH + 20;
+        stereoMonoRect = juce::Rectangle<int>(centerArea.getX() + 60, stereoY, 120, 30);
+        g.setColour(juce::Colours::darkorange);
+        g.fillRect(stereoMonoRect);
+        g.setColour(juce::Colours::white);
+        g.drawText("Stereo/Mono", stereoMonoRect, juce::Justification::centred);
+        // 장치 선택 박스
+        int deviceY = stereoY + 50;
+        inputDeviceRect = juce::Rectangle<int>(centerArea.getX() + 30, deviceY, 180, 30);
+        outputDeviceRect = juce::Rectangle<int>(centerArea.getX() + 230, deviceY, 180, 30);
+        
+        // 입력 장치 버튼
+        g.setColour(juce::Colours::lightblue);
+        g.fillRect(inputDeviceRect);
+        g.setColour(juce::Colours::black);
+        juce::String currentInput = inputDeviceList.empty() ? "Default Input" : inputDeviceList[0];
+        g.drawText(currentInput, inputDeviceRect, juce::Justification::centred);
+        
+        // 출력 장치 버튼
+        g.setColour(juce::Colours::lightgreen);
+        g.fillRect(outputDeviceRect);
+        g.setColour(juce::Colours::black);
+        juce::String currentOutput = outputDeviceList.empty() ? "Default Output" : outputDeviceList[0];
+        g.drawText(currentOutput, outputDeviceRect, juce::Justification::centred);
+        
+        // 입력 드롭다운이 열려있으면 장치 리스트 표시
+        if (inputDropdownOpen) {
+            inputDropdownRect = juce::Rectangle<int>(inputDeviceRect.getX(), inputDeviceRect.getBottom(), inputDeviceRect.getWidth(), 150);
+            g.setColour(juce::Colours::white);
+            g.fillRect(inputDropdownRect);
+            g.setColour(juce::Colours::black);
+            g.drawRect(inputDropdownRect);
+            
+            inputDeviceRects.clear();
+            for (int i = 0; i < inputDeviceList.size(); ++i) {
+                juce::Rectangle<int> itemRect(inputDropdownRect.getX(), inputDropdownRect.getY() + i * 25, inputDropdownRect.getWidth(), 25);
+                inputDeviceRects.push_back(itemRect);
+                g.setColour(juce::Colours::lightgrey);
+                g.fillRect(itemRect);
+                g.setColour(juce::Colours::black);
+                g.drawText(inputDeviceList[i], itemRect, juce::Justification::centredLeft);
+            }
+        }
+        
+        // 출력 드롭다운이 열려있으면 장치 리스트 표시
+        if (outputDropdownOpen) {
+            outputDropdownRect = juce::Rectangle<int>(outputDeviceRect.getX(), outputDeviceRect.getBottom(), outputDeviceRect.getWidth(), 150);
+            g.setColour(juce::Colours::white);
+            g.fillRect(outputDropdownRect);
+            g.setColour(juce::Colours::black);
+            g.drawRect(outputDropdownRect);
+            
+            outputDeviceRects.clear();
+            for (int i = 0; i < outputDeviceList.size(); ++i) {
+                juce::Rectangle<int> itemRect(outputDropdownRect.getX(), outputDropdownRect.getY() + i * 25, outputDropdownRect.getWidth(), 25);
+                outputDeviceRects.push_back(itemRect);
+                g.setColour(juce::Colours::lightgrey);
+                g.fillRect(itemRect);
+                g.setColour(juce::Colours::black);
+                g.drawText(outputDeviceList[i], itemRect, juce::Justification::centredLeft);
+            }
+        }
+        
+        // 3단: 오른쪽 플러그인 에디터 영역
+        juce::Rectangle<int> rightArea(col1 + col2, 0, col3, h);
+        g.setColour(juce::Colours::darkslategrey);
+        g.fillRect(rightArea);
+        g.setColour(juce::Colours::white);
+        g.setFont(20.0f);
+        g.drawText("Clear Plugin Editor", rightArea.reduced(20), juce::Justification::centred);
+        if (pluginEditor) {
+            pluginEditor->setBounds(col1 + col2, 0, col3, h);
+        }
+    }
     void resized() override {
-        try {
-            if (pluginEditor) {
-                // 플러그인 에디터는 상단에 배치
-                pluginEditor->setBounds(0, 0, getWidth(), getHeight() - 350);
-            }
-            
-            // Footer 영역에 노브들 배치
-            int footerY = getHeight() - 350;
-            int knobWidth = 120;
-            int knobHeight = 120;
-            int spacing = (getWidth() - (3 * knobWidth)) / 4;
-            
-            for (int i = 0; i < knobs.size(); ++i) {
-                int x = spacing + i * (knobWidth + spacing);
-                int y = footerY + 50;
-                knobs[i]->setBounds(x, y, knobWidth, knobHeight);
-            }
-            
-            // 프리셋 버튼들 (노브 아래쪽) - 3줄로 배치
-            int presetY = footerY + 180;
-            int buttonWidth = 100;
-            int buttonHeight = 30;
-            int buttonSpacing = (getWidth() - (3 * buttonWidth)) / 4;
-            
-            // 첫 번째 줄: 3개 버튼 (Bypass, S* up**, Too Loud)
-            if (bypassButton) bypassButton->setBounds(buttonSpacing, presetY, buttonWidth, buttonHeight);
-            if (ambientRoomButton) ambientRoomButton->setBounds(buttonSpacing + buttonWidth + buttonSpacing, presetY, buttonWidth, buttonHeight);
-            if (tooLoudButton) tooLoudButton->setBounds(buttonSpacing + 2 * (buttonWidth + buttonSpacing), presetY, buttonWidth, buttonHeight);
-            
-            // 두 번째 줄: 3개 버튼 (Silence, Clear Voice, Dry Voice)
-            int secondRowY = presetY + buttonHeight + 10;
-            int secondRowSpacing = (getWidth() - (3 * buttonWidth)) / 4;
-            if (muteButton) muteButton->setBounds(secondRowSpacing, secondRowY, buttonWidth, buttonHeight);
-            if (clearVoiceButton) clearVoiceButton->setBounds(secondRowSpacing + buttonWidth + secondRowSpacing, secondRowY, buttonWidth, buttonHeight);
-            if (dryVoiceButton) dryVoiceButton->setBounds(secondRowSpacing + 2 * (buttonWidth + secondRowSpacing), secondRowY, buttonWidth, buttonHeight);
-            
-            // 세 번째 줄: 1개 버튼 (Vocal Reference - 중앙 정렬)
-            int thirdRowY = secondRowY + buttonHeight + 10;
-            int thirdRowX = (getWidth() - buttonWidth) / 2;
-            if (vocalReferenceButton) vocalReferenceButton->setBounds(thirdRowX, thirdRowY, buttonWidth, buttonHeight);
-            
-            // 오디오 장치 선택 영역 (프리셋 버튼 아래쪽)
-            int deviceY = footerY + 280; // 3줄 버튼을 위해 위치 조정
-            int deviceWidth = getWidth() / 2;
-            
-            // 입력 장치
-            inputDeviceLabel.setBounds(20, deviceY, deviceWidth - 40, 20);
-            if (inputDeviceBox) inputDeviceBox->setBounds(20, deviceY + 25, deviceWidth - 40, 25);
-            
-            // 출력 장치
-            outputDeviceLabel.setBounds(deviceWidth + 20, deviceY, deviceWidth - 40, 20);
-            if (outputDeviceBox) outputDeviceBox->setBounds(deviceWidth + 20, deviceY + 25, deviceWidth - 40, 25);
-            
-            // 스테레오/모노 버튼 (footer 제일 아래)
-            int stereoMonoY = deviceY + 60;
-            int stereoMonoWidth = 120;
-            int stereoMonoHeight = 30;
-            int stereoMonoX = (getWidth() - stereoMonoWidth) / 2;
-            if (stereoMonoButton) stereoMonoButton->setBounds(stereoMonoX, stereoMonoY, stereoMonoWidth, stereoMonoHeight);
-        } catch (...) {
-            juce::Logger::writeToLog("Error in resized()");
+        auto bounds = getLocalBounds();
+        int w = bounds.getWidth();
+        int col1 = w * 0.25;
+        int col2 = w * 0.35;
+        int col3 = w - col1 - col2;
+        if (pluginEditor) {
+            pluginEditor->setBounds(col1 + col2, 0, col3, bounds.getHeight());
         }
     }
     
@@ -281,27 +352,14 @@ public:
     }
     
     void audioProcessorParameterChanged(juce::AudioProcessor*, int parameterIndex, float newValue) override {
-        // 플러그인 파라미터가 변경되면 노브 업데이트 (인덱스 기반)
+        juce::Logger::writeToLog("audioProcessorParameterChanged: enter idx=" + juce::String(parameterIndex));
         if (!clearPlugin) return;
-        
-        // 특정 파라미터 인덱스에 해당하는 노브 업데이트
-        switch (parameterIndex) {
-            case 1:  // Ambience Gain
-                knobs[0]->setValue(newValue, juce::dontSendNotification);
-                break;
-            case 14: // Voice Gain
-                knobs[1]->setValue(newValue, juce::dontSendNotification);
-                break;
-            case 12: // Voice Reverb Gain
-                knobs[2]->setValue(newValue, juce::dontSendNotification);
-                break;
-            case 13: // Stereo/Mono
-                if (stereoMonoButton) {
-                    juce::String buttonText = (newValue > 0.5f) ? "Stereo" : "Mono";
-                    stereoMonoButton->setButtonText(buttonText);
-                }
-                break;
-        }
+        auto params = clearPlugin->getParameters();
+        if (parameterIndex == 1 && params.size() > 1 && params[1]) knobValues[0] = newValue;
+        else if (parameterIndex == 14 && params.size() > 14 && params[14]) knobValues[1] = newValue;
+        else if (parameterIndex == 12 && params.size() > 12 && params[12]) knobValues[2] = newValue;
+        repaint();
+        juce::Logger::writeToLog("audioProcessorParameterChanged: exit idx=" + juce::String(parameterIndex));
     }
     
     void audioProcessorChanged(juce::AudioProcessor*, const juce::AudioProcessorListener::ChangeDetails&) override {
@@ -393,37 +451,26 @@ public:
     }
     
     void startAnimation(const std::array<double, 3>& targetValues) {
-        // 현재 값들을 시작 값으로 저장
         for (int i = 0; i < 3; ++i) {
-            animationStartValues[i] = knobs[i]->getValue();
+            animationStartValues[i] = knobValues[i];
             animationTargetValues[i] = targetValues[i];
         }
-        
-        // 애니메이션 시작
         animationStartTime = juce::Time::getMillisecondCounterHiRes() / 1000.0;
         isAnimating = true;
         startTimer(animationTimerInterval);
-        
-        juce::Logger::writeToLog("Animation started: " + juce::String(animationStartValues[0]) + "," + 
-                                juce::String(animationStartValues[1]) + "," + juce::String(animationStartValues[2]) + 
-                                " -> " + juce::String(targetValues[0]) + "," + juce::String(targetValues[1]) + "," + juce::String(targetValues[2]));
     }
     
     void setKnobValue(int knobIndex, double value) {
-        if (knobIndex >= 0 && knobIndex < knobs.size()) {
-            knobs[knobIndex]->setValue(value, juce::dontSendNotification);
-            
-            // 플러그인 파라미터도 업데이트
+        if (knobIndex >= 0 && knobIndex < knobValues.size()) {
+            knobValues[knobIndex] = value;
             if (clearPlugin) {
                 auto params = clearPlugin->getParameters();
                 int targetParamIndex = -1;
-                
                 switch (knobIndex) {
-                    case 0: targetParamIndex = 1; break;  // Ambience Gain
-                    case 1: targetParamIndex = 14; break; // Voice Gain
-                    case 2: targetParamIndex = 12; break; // Voice Reverb Gain
+                    case 0: targetParamIndex = 1; break;
+                    case 1: targetParamIndex = 14; break;
+                    case 2: targetParamIndex = 12; break;
                 }
-                
                 if (targetParamIndex >= 0 && targetParamIndex < params.size() && params[targetParamIndex]) {
                     params[targetParamIndex]->setValueNotifyingHost((float)value);
                 }
@@ -432,44 +479,65 @@ public:
     }
     
     void timerCallback() override {
-        if (!isAnimating) return;
-        
-        double currentTime = juce::Time::getMillisecondCounterHiRes() / 1000.0;
-        double elapsedTime = currentTime - animationStartTime;
-        double progress = juce::jlimit(0.0, 1.0, elapsedTime / animationDuration);
-        
-        // 이징 함수 (부드러운 애니메이션)
-        double easedProgress = 1.0 - std::pow(1.0 - progress, 3.0); // ease-out cubic
-        
-        // 각 노브 값 업데이트
-        for (int i = 0; i < 3; ++i) {
-            double currentValue = animationStartValues[i] + (animationTargetValues[i] - animationStartValues[i]) * easedProgress;
-            setKnobValue(i, currentValue);
-        }
-        
-        // 애니메이션 완료 체크
-        if (progress >= 1.0) {
-            isAnimating = false;
+        if (isAnimating) {
+            double currentTime = juce::Time::getMillisecondCounterHiRes() / 1000.0;
+            double elapsedTime = currentTime - animationStartTime;
+            double progress = juce::jlimit(0.0, 1.0, elapsedTime / animationDuration);
+            double easedProgress = 1.0 - std::pow(1.0 - progress, 3.0);
+            for (int i = 0; i < 3; ++i) {
+                double currentValue = animationStartValues[i] + (animationTargetValues[i] - animationStartValues[i]) * easedProgress;
+                setKnobValue(i, currentValue);
+            }
+            repaint();
+            if (progress >= 1.0) {
+                isAnimating = false;
+                stopTimer();
+                juce::Logger::writeToLog("Animation completed");
+            }
+        } else {
             stopTimer();
-            juce::Logger::writeToLog("Animation completed");
+            juce::Logger::writeToLog("timerCallback: updateKnobsFromPlugin() 시도");
+            if (!clearPlugin) return;
+            auto params = clearPlugin->getParameters();
+            if (params.size() > 1 && params[1] && params[1]->getName(100).isNotEmpty()) {
+                juce::Logger::writeToLog("timerCallback: 파라미터 접근 OK");
+                updateKnobsFromPlugin();
+            } else {
+                juce::Logger::writeToLog("timerCallback: 파라미터 접근 불가, 재시도");
+                startTimer(100);
+            }
         }
     }
     
     void updateKnobsFromPlugin() {
         if (!clearPlugin) return;
-        
         auto params = clearPlugin->getParameters();
-        
-        // 특정 파라미터 인덱스의 값으로 노브 초기화
-        if (params.size() > 1 && params[1]) {
-            knobs[0]->setValue(params[1]->getValue(), juce::dontSendNotification); // Ambience Gain
+        juce::Logger::writeToLog("updateKnobsFromPlugin: params.size()=" + juce::String(params.size()));
+        if (params.size() > 1) {
+            juce::Logger::writeToLog("param[1] ptr=" + juce::String((uint64_t)params[1]));
+            if (params[1]) {
+                juce::Logger::writeToLog("param[1] getValue() before");
+                knobValues[0] = params[1]->getValue();
+                juce::Logger::writeToLog("param[1] getValue() after: " + juce::String(knobValues[0]));
+            }
         }
-        if (params.size() > 14 && params[14]) {
-            knobs[1]->setValue(params[14]->getValue(), juce::dontSendNotification); // Voice Gain
+        if (params.size() > 14) {
+            juce::Logger::writeToLog("param[14] ptr=" + juce::String((uint64_t)params[14]));
+            if (params[14]) {
+                juce::Logger::writeToLog("param[14] getValue() before");
+                knobValues[1] = params[14]->getValue();
+                juce::Logger::writeToLog("param[14] getValue() after: " + juce::String(knobValues[1]));
+            }
         }
-        if (params.size() > 12 && params[12]) {
-            knobs[2]->setValue(params[12]->getValue(), juce::dontSendNotification); // Voice Reverb Gain
+        if (params.size() > 12) {
+            juce::Logger::writeToLog("param[12] ptr=" + juce::String((uint64_t)params[12]));
+            if (params[12]) {
+                juce::Logger::writeToLog("param[12] getValue() before");
+                knobValues[2] = params[12]->getValue();
+                juce::Logger::writeToLog("param[12] getValue() after: " + juce::String(knobValues[2]));
+            }
         }
+        repaint();
     }
     
     void restoreSystemOutputDevice() {
@@ -503,7 +571,406 @@ public:
         }
     }
     
-    // 시스템 출력 소스 복구 함수 (public으로 노출)
+    void performAutoSetup() {
+        juce::Logger::writeToLog("=== Starting Auto Setup ===");
+        
+        // 1. JUCE 초기화 확인
+        juce::Logger::writeToLog("JUCE initialized successfully");
+        
+        // 2. 오디오 디바이스 매니저 초기화 확인
+        juce::Logger::writeToLog("Audio Device Manager will be initialized");
+        
+        // 3. macOS 확인
+        #if JUCE_MAC
+        juce::Logger::writeToLog("macOS detected - Core Audio will be used");
+        #endif
+        
+        // 4. 플러그인 포맷 확인
+        juce::Logger::writeToLog("Plugin formats will be initialized");
+        
+        // 5. 첫 실행 시 필요한 도구들 설치
+        checkAndInstallRequiredTools();
+        
+        // 6. 현재 시스템 사운드 출력 소스 저장
+        saveCurrentSystemOutputDevice();
+        
+        juce::Logger::writeToLog("=== Auto Setup Complete ===");
+    }
+    
+    void setSystemOutputToBlackHole() {
+        juce::Logger::writeToLog("Setting system output to BlackHole...");
+        
+        // 시스템 출력을 BlackHole로 변경하는 명령어들 시도 (AppleScript 제거)
+        juce::StringArray commands = {
+            "/opt/homebrew/bin/SwitchAudioSource -s \"BlackHole 2ch\"",
+            "/usr/local/bin/SwitchAudioSource -s \"BlackHole 2ch\"",
+            "/opt/homebrew/Cellar/switchaudio-osx/1.2.2/bin/SwitchAudioSource -s \"BlackHole 2ch\"",
+            "SwitchAudioSource -s \"BlackHole 2ch\""
+        };
+        
+        bool success = false;
+        for (auto& command : commands) {
+            int result = system(command.toRawUTF8());
+            if (result == 0) {
+                juce::Logger::writeToLog("Successfully set system output to BlackHole using: " + command);
+                success = true;
+                break;
+            }
+        }
+        
+        if (!success) {
+            juce::Logger::writeToLog("Failed to set system output to BlackHole with all methods");
+        }
+    }
+    
+    void saveCurrentSystemOutputDevice() {
+        juce::Logger::writeToLog("Saving current system output device...");
+        
+        // SwitchAudioSource를 사용하여 현재 시스템 출력 장치를 가져오기
+        juce::StringArray commands = {
+            "/opt/homebrew/bin/SwitchAudioSource -c",
+            "/usr/local/bin/SwitchAudioSource -c",
+            "/opt/homebrew/Cellar/switchaudio-osx/1.2.2/bin/SwitchAudioSource -c",
+            "SwitchAudioSource -c"
+        };
+        
+        for (auto& command : commands) {
+            FILE* pipe = popen(command.toRawUTF8(), "r");
+            if (pipe) {
+                char buffer[256];
+                juce::String result = "";
+                while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                    result += buffer;
+                }
+                pclose(pipe);
+                
+                result = result.trim();
+                if (result.isNotEmpty()) {
+                    originalSystemOutputDevice = result;
+                    juce::Logger::writeToLog("Saved current system output device: " + originalSystemOutputDevice);
+                    return;
+                }
+            }
+        }
+        
+        // 실패 시 기본값 사용
+        originalSystemOutputDevice = "MacBook Pro 스피커";
+        juce::Logger::writeToLog("Failed to get current device, using default: " + originalSystemOutputDevice);
+    }
+    
+    void checkAndInstallRequiredTools() {
+        // 첫 실행 파일 경로 설정
+        firstRunFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                      .getChildFile("ClearHost")
+                      .getChildFile("first_run_completed.txt");
+        
+        // 첫 실행이 완료되었는지 확인
+        if (firstRunFile.existsAsFile()) {
+            juce::Logger::writeToLog("First run already completed, skipping tool installation");
+            return;
+        }
+        
+        juce::Logger::writeToLog("=== First Run - Installing Required Tools ===");
+        
+        // 1. BlackHole 설치 확인 및 설치
+        checkAndInstallBlackHole();
+        
+        // 2. switchaudio-osx 설치 확인 및 설치
+        checkAndInstallSwitchAudioOSX();
+        
+        // 3. 시스템 설정 접근 권한 확인 및 안내
+        checkSystemPreferencesAccess();
+        
+        // 4. 첫 실행 완료 표시
+        firstRunFile.getParentDirectory().createDirectory();
+        firstRunFile.create();
+        juce::Logger::writeToLog("First run setup completed");
+    }
+    
+    void checkAndInstallBlackHole() {
+        juce::Logger::writeToLog("Checking BlackHole installation...");
+        
+        // BlackHole이 설치되어 있는지 확인
+        juce::File blackHoleComponent("/Library/Audio/Plug-Ins/Components/BlackHole2ch.component");
+        juce::File blackHoleVST("/Library/Audio/Plug-Ins/VST/BlackHole.vst");
+        
+        if (blackHoleComponent.exists() || blackHoleVST.exists()) {
+            juce::Logger::writeToLog("BlackHole is already installed");
+            return;
+        }
+        
+        juce::Logger::writeToLog("BlackHole not found - installing...");
+        
+        // Homebrew를 통해 BlackHole 설치
+        juce::String command = "brew install blackhole-2ch";
+        int result = system(command.toRawUTF8());
+        
+        if (result == 0) {
+            juce::Logger::writeToLog("BlackHole installed successfully");
+        } else {
+            juce::Logger::writeToLog("Failed to install BlackHole via Homebrew");
+            
+            // 대안: 수동 설치 안내
+            juce::Logger::writeToLog("Please install BlackHole manually from: https://existential.audio/blackhole/");
+        }
+    }
+    
+    void checkAndInstallSwitchAudioOSX() {
+        juce::Logger::writeToLog("Checking SwitchAudioSource installation...");
+        
+        // SwitchAudioSource가 설치되어 있는지 확인 (전체 경로 포함)
+        juce::StringArray possiblePaths = {
+            "/opt/homebrew/bin/SwitchAudioSource",
+            "/usr/local/bin/SwitchAudioSource",
+            "/opt/homebrew/Cellar/switchaudio-osx/1.2.2/bin/SwitchAudioSource",
+            "SwitchAudioSource"
+        };
+        
+        bool found = false;
+        for (auto& path : possiblePaths) {
+            juce::String command = "which " + path;
+            FILE* pipe = popen(command.toRawUTF8(), "r");
+            if (pipe) {
+                char buffer[256];
+                juce::String result = "";
+                while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                    result += buffer;
+                }
+                pclose(pipe);
+                
+                if (result.trim().isNotEmpty()) {
+                    juce::Logger::writeToLog("SwitchAudioSource found at: " + result.trim());
+                    found = true;
+                    break;
+                }
+            }
+        }
+        
+        if (found) {
+            juce::Logger::writeToLog("SwitchAudioSource is already installed");
+            return;
+        }
+        
+        juce::Logger::writeToLog("SwitchAudioSource not found - installing...");
+        
+        // Homebrew를 통해 switchaudio-osx 설치
+        juce::String command = "brew install switchaudio-osx";
+        int result = system(command.toRawUTF8());
+        
+        if (result == 0) {
+            juce::Logger::writeToLog("SwitchAudioSource installed successfully");
+        } else {
+            juce::Logger::writeToLog("Failed to install SwitchAudioSource via Homebrew");
+        }
+    }
+    
+    void checkSystemPreferencesAccess() {
+        juce::Logger::writeToLog("Checking System Preferences access...");
+        
+        // 시스템 설정 접근 권한 확인
+        juce::String command = "osascript -e 'tell application \"System Events\" to get name of current location of (get volume settings)'";
+        FILE* pipe = popen(command.toRawUTF8(), "r");
+        if (pipe) {
+            char buffer[256];
+            juce::String result = "";
+            while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                result += buffer;
+            }
+            pclose(pipe);
+            
+            if (result.trim().isNotEmpty()) {
+                juce::Logger::writeToLog("System Preferences access is working");
+            } else {
+                juce::Logger::writeToLog("System Preferences access may be restricted");
+                juce::Logger::writeToLog("Please grant accessibility permissions in System Preferences > Security & Privacy > Privacy > Accessibility");
+            }
+        }
+    }
+    
+    void mapMidiCCToClearParameter(const juce::MidiMessage& message) {
+        int cc = message.getControllerNumber();
+        float value = message.getControllerValue() / 127.0f;
+        int paramIdx = -1;
+        if (cc == 21) paramIdx = 0;
+        else if (cc == 22) paramIdx = 1;
+        else if (cc == 23) paramIdx = 2;
+        if (clearPlugin && paramIdx >= 0) {
+            auto params = clearPlugin->getParameters();
+            if (paramIdx < params.size() && params[paramIdx])
+                params[paramIdx]->setValueNotifyingHost(value);
+        }
+    }
+
+    void mouseDown(const juce::MouseEvent& event) override {
+        auto pos = event.getPosition();
+        // 노브 클릭 hit test
+        for (int i = 0; i < knobRects.size(); ++i) {
+            if (knobRects[i].contains(pos)) {
+                draggingKnob = i;
+                lastDragY = pos.y;
+                return;
+            }
+        }
+        // 프리셋 버튼 7개
+        for (int i = 0; i < 7; ++i) { // buttonRects.size() 대신 7로 고정
+            if (buttonRects[i].contains(pos)) {
+                // 기존 preset 기능 매핑
+                switch (i) {
+                    case 0: startAnimation({0.5, 0.5, 0.5}); break; // Bypass
+                    case 1: startAnimation({0.5, 0.0, 0.0}); break; // S* up**
+                    case 2: startAnimation({0.5, 0.2, 0.2}); break; // Too Loud
+                    case 3: startAnimation({0.0, 0.0, 0.0}); break; // Silence
+                    case 4: startAnimation({0.0, 0.5, 0.5}); break; // Clear Voice
+                    case 5: startAnimation({0.0, 0.5, 0.0}); break; // Dry Voice
+                    case 6: startAnimation({0.5, 0.1, 0.1}); break; // Vocal Reference
+                }
+                repaint();
+                return;
+            }
+        }
+        // 스테레오/모노 버튼
+        if (stereoMonoRect.contains(pos)) {
+            if (clearPlugin) {
+                auto params = clearPlugin->getParameters();
+                if (params.size() > 13 && params[13]) {
+                    float currentValue = params[13]->getValue();
+                    float newValue = (currentValue > 0.5f) ? 0.0f : 1.0f;
+                    params[13]->setValueNotifyingHost(newValue);
+                }
+            }
+            repaint();
+            return;
+        }
+        
+        // 입력 장치 버튼 클릭
+        if (inputDeviceRect.contains(pos)) {
+            inputDropdownOpen = !inputDropdownOpen;
+            outputDropdownOpen = false; // 다른 드롭다운 닫기
+            if (inputDropdownOpen && inputDeviceList.empty()) {
+                updateInputDeviceList();
+            }
+            repaint();
+            return;
+        }
+        
+        // 출력 장치 버튼 클릭
+        if (outputDeviceRect.contains(pos)) {
+            outputDropdownOpen = !outputDropdownOpen;
+            inputDropdownOpen = false; // 다른 드롭다운 닫기
+            if (outputDropdownOpen && outputDeviceList.empty()) {
+                updateOutputDeviceList();
+            }
+            repaint();
+            return;
+        }
+        
+        // 입력 드롭다운 아이템 클릭
+        if (inputDropdownOpen) {
+            for (int i = 0; i < inputDeviceRects.size(); ++i) {
+                if (inputDeviceRects[i].contains(pos)) {
+                    juce::String selectedDevice = inputDeviceList[i];
+                    changeAudioInputDevice(selectedDevice);
+                    inputDropdownOpen = false;
+                    repaint();
+                    return;
+                }
+            }
+        }
+        
+        // 출력 드롭다운 아이템 클릭
+        if (outputDropdownOpen) {
+            for (int i = 0; i < outputDeviceRects.size(); ++i) {
+                if (outputDeviceRects[i].contains(pos)) {
+                    juce::String selectedDevice = outputDeviceList[i];
+                    changeAudioOutputDevice(selectedDevice);
+                    outputDropdownOpen = false;
+                    repaint();
+                    return;
+                }
+            }
+        }
+        
+        // 드롭다운 외부 클릭 시 드롭다운 닫기
+        if (inputDropdownOpen || outputDropdownOpen) {
+            inputDropdownOpen = false;
+            outputDropdownOpen = false;
+            repaint();
+            return;
+        }
+    }
+
+    void mouseDrag(const juce::MouseEvent& event) override {
+        if (draggingKnob >= 0) {
+            int dy = lastDragY - event.getPosition().y;
+            float delta = dy * 0.005f; // 감도
+            knobValues[draggingKnob] = juce::jlimit(0.0f, 1.0f, knobValues[draggingKnob] + delta);
+            lastDragY = event.getPosition().y;
+            
+            // 애니메이션 중에 노브를 조절하면 해당 노브의 애니메이션을 강제 중지
+            if (isAnimating) {
+                animationTargetValues[draggingKnob] = knobValues[draggingKnob];
+                juce::Logger::writeToLog("Knob " + juce::String(draggingKnob) + " animation stopped by user interaction");
+            }
+            
+            // 파라미터 반영
+            if (clearPlugin) {
+                auto params = clearPlugin->getParameters();
+                int targetParamIndex = -1;
+                switch (draggingKnob) {
+                    case 0: targetParamIndex = 1; break;
+                    case 1: targetParamIndex = 14; break;
+                    case 2: targetParamIndex = 12; break;
+                }
+                if (targetParamIndex >= 0 && targetParamIndex < params.size() && params[targetParamIndex]) {
+                    params[targetParamIndex]->setValueNotifyingHost(knobValues[draggingKnob]);
+                }
+            }
+            repaint();
+        }
+    }
+
+    void mouseUp(const juce::MouseEvent&) override {
+        draggingKnob = -1;
+    }
+
+    void updateOutputDeviceList() {
+        outputDeviceList.clear();
+        outputDeviceList.push_back("Default Output");
+        
+        auto* deviceType = deviceManager.getCurrentDeviceTypeObject();
+        if (deviceType) {
+            try {
+                auto outputNames = deviceType->getDeviceNames(false); // false = output devices
+                for (int i = 0; i < outputNames.size(); ++i) {
+                    outputDeviceList.push_back(outputNames[i]);
+                }
+            } catch (...) {
+                juce::Logger::writeToLog("Error getting output device names");
+            }
+        }
+    }
+    
+    void updateInputDeviceList() {
+        inputDeviceList.clear();
+        inputDeviceList.push_back("Default Input");
+        
+        auto* deviceType = deviceManager.getCurrentDeviceTypeObject();
+        if (deviceType) {
+            try {
+                auto inputNames = deviceType->getDeviceNames(true); // true = input devices
+                for (int i = 0; i < inputNames.size(); ++i) {
+                    juce::String deviceName = inputNames[i];
+                    if (deviceName.contains("BlackHole") || deviceName.contains("blackhole")) {
+                        inputDeviceList.push_back("OS Sound (BlackHole)");
+                    } else {
+                        inputDeviceList.push_back(deviceName);
+                    }
+                }
+            } catch (...) {
+                juce::Logger::writeToLog("Error getting input device names");
+            }
+        }
+    }
 
 private:
     juce::AudioPluginFormatManager pluginManager;
@@ -537,6 +1004,26 @@ private:
     
     // 첫 실행 여부 확인용 파일 경로
     juce::File firstRunFile;
+    
+    std::vector<juce::Rectangle<int>> knobRects;
+    std::vector<float> knobValues;
+    std::vector<juce::Rectangle<int>> buttonRects;
+    std::vector<juce::String> buttonLabels;
+    juce::Rectangle<int> stereoMonoRect;
+    juce::Rectangle<int> inputDeviceRect;
+    juce::Rectangle<int> outputDeviceRect;
+    int draggingKnob = -1;
+    int lastDragY = 0;
+    
+    // 드롭다운 관련 변수들
+    bool inputDropdownOpen = false;
+    bool outputDropdownOpen = false;
+    std::vector<juce::String> inputDeviceList;
+    std::vector<juce::String> outputDeviceList;
+    juce::Rectangle<int> inputDropdownRect;
+    juce::Rectangle<int> outputDropdownRect;
+    std::vector<juce::Rectangle<int>> inputDeviceRects;
+    std::vector<juce::Rectangle<int>> outputDeviceRects;
     
     void loadClearVST3() {
         // VST3를 우선적으로 시도 (권한 문제 해결 후)
@@ -853,238 +1340,6 @@ private:
                 // 오디오 재시작
                 deviceManager.restartLastAudioDevice();
             }
-        }
-    }
-    
-    void performAutoSetup() {
-        juce::Logger::writeToLog("=== Starting Auto Setup ===");
-        
-        // 1. JUCE 초기화 확인
-        juce::Logger::writeToLog("JUCE initialized successfully");
-        
-        // 2. 오디오 디바이스 매니저 초기화 확인
-        juce::Logger::writeToLog("Audio Device Manager will be initialized");
-        
-        // 3. macOS 확인
-        #if JUCE_MAC
-        juce::Logger::writeToLog("macOS detected - Core Audio will be used");
-        #endif
-        
-        // 4. 플러그인 포맷 확인
-        juce::Logger::writeToLog("Plugin formats will be initialized");
-        
-        // 5. 첫 실행 시 필요한 도구들 설치
-        checkAndInstallRequiredTools();
-        
-        // 6. 현재 시스템 사운드 출력 소스 저장
-        saveCurrentSystemOutputDevice();
-        
-        juce::Logger::writeToLog("=== Auto Setup Complete ===");
-    }
-    
-    void setSystemOutputToBlackHole() {
-        juce::Logger::writeToLog("Setting system output to BlackHole...");
-        
-        // 시스템 출력을 BlackHole로 변경하는 명령어들 시도 (AppleScript 제거)
-        juce::StringArray commands = {
-            "/opt/homebrew/bin/SwitchAudioSource -s \"BlackHole 2ch\"",
-            "/usr/local/bin/SwitchAudioSource -s \"BlackHole 2ch\"",
-            "/opt/homebrew/Cellar/switchaudio-osx/1.2.2/bin/SwitchAudioSource -s \"BlackHole 2ch\"",
-            "SwitchAudioSource -s \"BlackHole 2ch\""
-        };
-        
-        bool success = false;
-        for (auto& command : commands) {
-            int result = system(command.toRawUTF8());
-            if (result == 0) {
-                juce::Logger::writeToLog("Successfully set system output to BlackHole using: " + command);
-                success = true;
-                break;
-            }
-        }
-        
-        if (!success) {
-            juce::Logger::writeToLog("Failed to set system output to BlackHole with all methods");
-        }
-    }
-    
-    void saveCurrentSystemOutputDevice() {
-        juce::Logger::writeToLog("Saving current system output device...");
-        
-        // SwitchAudioSource를 사용하여 현재 시스템 출력 장치를 가져오기
-        juce::StringArray commands = {
-            "/opt/homebrew/bin/SwitchAudioSource -c",
-            "/usr/local/bin/SwitchAudioSource -c",
-            "/opt/homebrew/Cellar/switchaudio-osx/1.2.2/bin/SwitchAudioSource -c",
-            "SwitchAudioSource -c"
-        };
-        
-        for (auto& command : commands) {
-            FILE* pipe = popen(command.toRawUTF8(), "r");
-            if (pipe) {
-                char buffer[256];
-                juce::String result = "";
-                while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-                    result += buffer;
-                }
-                pclose(pipe);
-                
-                result = result.trim();
-                if (result.isNotEmpty()) {
-                    originalSystemOutputDevice = result;
-                    juce::Logger::writeToLog("Saved current system output device: " + originalSystemOutputDevice);
-                    return;
-                }
-            }
-        }
-        
-        // 실패 시 기본값 사용
-        originalSystemOutputDevice = "MacBook Pro 스피커";
-        juce::Logger::writeToLog("Failed to get current device, using default: " + originalSystemOutputDevice);
-    }
-    
-
-    
-    void checkAndInstallRequiredTools() {
-        // 첫 실행 파일 경로 설정
-        firstRunFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                      .getChildFile("ClearHost")
-                      .getChildFile("first_run_completed.txt");
-        
-        // 첫 실행이 완료되었는지 확인
-        if (firstRunFile.existsAsFile()) {
-            juce::Logger::writeToLog("First run already completed, skipping tool installation");
-            return;
-        }
-        
-        juce::Logger::writeToLog("=== First Run - Installing Required Tools ===");
-        
-        // 1. BlackHole 설치 확인 및 설치
-        checkAndInstallBlackHole();
-        
-        // 2. switchaudio-osx 설치 확인 및 설치
-        checkAndInstallSwitchAudioOSX();
-        
-        // 3. 시스템 설정 접근 권한 확인 및 안내
-        checkSystemPreferencesAccess();
-        
-        // 4. 첫 실행 완료 표시
-        firstRunFile.getParentDirectory().createDirectory();
-        firstRunFile.create();
-        juce::Logger::writeToLog("First run setup completed");
-    }
-    
-    void checkAndInstallBlackHole() {
-        juce::Logger::writeToLog("Checking BlackHole installation...");
-        
-        // BlackHole이 설치되어 있는지 확인
-        juce::File blackHoleComponent("/Library/Audio/Plug-Ins/Components/BlackHole2ch.component");
-        juce::File blackHoleVST("/Library/Audio/Plug-Ins/VST/BlackHole.vst");
-        
-        if (blackHoleComponent.exists() || blackHoleVST.exists()) {
-            juce::Logger::writeToLog("BlackHole is already installed");
-            return;
-        }
-        
-        juce::Logger::writeToLog("BlackHole not found - installing...");
-        
-        // Homebrew를 통해 BlackHole 설치
-        juce::String command = "brew install blackhole-2ch";
-        int result = system(command.toRawUTF8());
-        
-        if (result == 0) {
-            juce::Logger::writeToLog("BlackHole installed successfully");
-        } else {
-            juce::Logger::writeToLog("Failed to install BlackHole via Homebrew");
-            
-            // 대안: 수동 설치 안내
-            juce::Logger::writeToLog("Please install BlackHole manually from: https://existential.audio/blackhole/");
-        }
-    }
-    
-    void checkAndInstallSwitchAudioOSX() {
-        juce::Logger::writeToLog("Checking SwitchAudioSource installation...");
-        
-        // SwitchAudioSource가 설치되어 있는지 확인 (전체 경로 포함)
-        juce::StringArray possiblePaths = {
-            "/opt/homebrew/bin/SwitchAudioSource",
-            "/usr/local/bin/SwitchAudioSource",
-            "/opt/homebrew/Cellar/switchaudio-osx/1.2.2/bin/SwitchAudioSource",
-            "SwitchAudioSource"
-        };
-        
-        bool found = false;
-        for (auto& path : possiblePaths) {
-            juce::String command = "which " + path;
-            FILE* pipe = popen(command.toRawUTF8(), "r");
-            if (pipe) {
-                char buffer[256];
-                juce::String result = "";
-                while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-                    result += buffer;
-                }
-                pclose(pipe);
-                
-                if (result.trim().isNotEmpty()) {
-                    juce::Logger::writeToLog("SwitchAudioSource found at: " + result.trim());
-                    found = true;
-                    break;
-                }
-            }
-        }
-        
-        if (found) {
-            juce::Logger::writeToLog("SwitchAudioSource is already installed");
-            return;
-        }
-        
-        juce::Logger::writeToLog("SwitchAudioSource not found - installing...");
-        
-        // Homebrew를 통해 switchaudio-osx 설치
-        juce::String command = "brew install switchaudio-osx";
-        int result = system(command.toRawUTF8());
-        
-        if (result == 0) {
-            juce::Logger::writeToLog("SwitchAudioSource installed successfully");
-        } else {
-            juce::Logger::writeToLog("Failed to install SwitchAudioSource via Homebrew");
-        }
-    }
-    
-    void checkSystemPreferencesAccess() {
-        juce::Logger::writeToLog("Checking System Preferences access...");
-        
-        // 시스템 설정 접근 권한 확인
-        juce::String command = "osascript -e 'tell application \"System Events\" to get name of current location of (get volume settings)'";
-        FILE* pipe = popen(command.toRawUTF8(), "r");
-        if (pipe) {
-            char buffer[256];
-            juce::String result = "";
-            while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-                result += buffer;
-            }
-            pclose(pipe);
-            
-            if (result.trim().isNotEmpty()) {
-                juce::Logger::writeToLog("System Preferences access is working");
-            } else {
-                juce::Logger::writeToLog("System Preferences access may be restricted");
-                juce::Logger::writeToLog("Please grant accessibility permissions in System Preferences > Security & Privacy > Privacy > Accessibility");
-            }
-        }
-    }
-    
-    void mapMidiCCToClearParameter(const juce::MidiMessage& message) {
-        int cc = message.getControllerNumber();
-        float value = message.getControllerValue() / 127.0f;
-        int paramIdx = -1;
-        if (cc == 21) paramIdx = 0;
-        else if (cc == 22) paramIdx = 1;
-        else if (cc == 23) paramIdx = 2;
-        if (clearPlugin && paramIdx >= 0) {
-            auto params = clearPlugin->getParameters();
-            if (paramIdx < params.size() && params[paramIdx])
-                params[paramIdx]->setValueNotifyingHost(value);
         }
     }
 };
