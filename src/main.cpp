@@ -1816,6 +1816,45 @@ public:
     void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override {
         auto pos = event.getPosition();
         
+        // 노브 스크롤 처리 (드롭다운보다 우선순위 높음)
+        if (controlPanel) {
+            int knobIndex = controlPanel->hitTestKnob(pos);
+            if (knobIndex >= 0 && knobIndex < knobValues.size()) {
+                // 스크롤 방향에 따른 값 변경
+                // wheel.deltaY < 0: 위로 스크롤 (값 증가) - 트랙패드 방향
+                // wheel.deltaY > 0: 아래로 스크롤 (값 감소) - 트랙패드 방향
+                float delta = (wheel.deltaY < 0) ? 0.01f : -0.01f; // 스크롤당 1% 변화 (원래 민감도)
+                float newValue = juce::jlimit(0.0f, 2.0f, knobValues[knobIndex] + delta); // 0~2 범위로 확장
+                
+                // 노브 값 업데이트
+                knobValues[knobIndex] = newValue;
+                
+                // 플러그인 파라미터 업데이트
+                if (clearPlugin && pluginLoaded) {
+                    // 노브 인덱스에 따른 파라미터 매핑
+                    int parameterIndex = -1;
+                    switch (knobIndex) {
+                        case 0: parameterIndex = 1; break;  // Ambience Gain
+                        case 1: parameterIndex = 14; break; // Voice Gain
+                        case 2: parameterIndex = 12; break; // Voice Reverb Gain
+                    }
+                    
+                    if (parameterIndex >= 0) {
+                        // 노브 값(0~2)을 플러그인 파라미터 값(0~1)으로 정규화
+                        float normalizedValue = juce::jlimit(0.0f, 1.0f, newValue / 2.0f);
+                        clearPlugin->setParameter(parameterIndex, normalizedValue);
+                        juce::Logger::writeToLog("Knob " + juce::String(knobIndex) + " -> Parameter " + juce::String(parameterIndex) + " = " + juce::String(normalizedValue) + " (from " + juce::String(newValue) + ")");
+                    }
+                }
+                
+                // 노브 값 표시 상태 업데이트
+                updateKnobDisplayState(knobIndex, newValue);
+                
+                repaint();
+                return; // 노브 스크롤이 처리되었으면 다른 스크롤은 무시
+            }
+        }
+        
         // 입력 드롭다운 스크롤
         if (inputDropdownOpen && inputDropdownRect.contains(pos)) {
             if (inputDeviceList.size() > MAX_VISIBLE_ITEMS) {
