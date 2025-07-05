@@ -466,23 +466,23 @@ public:
         
         juce::Font font("Euclid Circular B", 15.0f, juce::Font::plain);
         
-        // in 버튼 - 좌측 정렬, 세퍼레이터 왼쪽 끝에서 우측으로 2px 이동, 기본 알파값 적용
+        // in 버튼 - 좌측 정렬, 세퍼레이터 왼쪽 끝에서 우측으로 2px 이동, 텍스트는 기본 알파값의 절반, 언더라인은 기본 알파값
         int inX = 8 + 2; // 세퍼레이터 왼쪽 끝 + 2px
         int inTextWidth = font.getStringWidth("in");
-        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA * 0.5f)); // 기본 알파값의 절반
         g.setFont(font);
         g.drawText("in", inX, buttonY, inTextWidth, 20, juce::Justification::centredLeft);
-        // in 언더라인 그리기 (100% 투명도)
-        g.setColour(juce::Colours::black);
+        // in 언더라인 그리기 (기본 알파값)
+        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
         g.drawLine(inX, buttonY + 17, inX + inTextWidth, buttonY + 17, 1.0f);
         
-        // out 버튼 - 우측 정렬, out 오른쪽 끝을 기준으로 정렬하고 왼쪽으로 2px 이동, 기본 알파값 적용
+        // out 버튼 - 우측 정렬, out 오른쪽 끝을 기준으로 정렬하고 왼쪽으로 2px 이동, 텍스트는 기본 알파값의 절반, 언더라인은 기본 알파값
         int outTextWidth = font.getStringWidth("out");
         int outX = 152 - outTextWidth - 2; // 오른쪽 끝 기준 - 텍스트 너비 - 2px
-        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA * 0.5f)); // 기본 알파값의 절반
         g.drawText("out", outX, buttonY, outTextWidth, 20, juce::Justification::centredLeft);
-        // out 언더라인 그리기 (100% 투명도)
-        g.setColour(juce::Colours::black);
+        // out 언더라인 그리기 (기본 알파값)
+        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
         g.drawLine(outX, buttonY + 17, outX + outTextWidth, buttonY + 17, 1.0f);
         
         // preset 클래스 사용하여 그리기
@@ -1976,6 +1976,8 @@ private:
                 juce::Logger::writeToLog("Failed to set default input: " + result);
             } else {
                 juce::Logger::writeToLog("Successfully set default input device");
+                // 기본 입력으로 변경 시 시스템 출력 복원
+                restoreSystemOutputDevice();
             }
         } else if (deviceName == "OS Sound (BlackHole)") {
             // BlackHole 장치 찾기
@@ -2030,6 +2032,9 @@ private:
                 juce::Logger::writeToLog("Failed to change input device to: " + deviceName + " (" + result + ")");
             } else {
                 juce::Logger::writeToLog("Successfully changed input device to: " + deviceName);
+                
+                // BlackHole이 아닌 다른 장치로 변경 시 시스템 출력 복원
+                restoreSystemOutputDevice();
                 
                 // 오디오 재시작
                 deviceManager.restartLastAudioDevice();
