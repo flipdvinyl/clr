@@ -1829,6 +1829,11 @@ public:
                 // 노브 값 업데이트
                 knobValues[knobIndex] = newValue;
                 
+                // preset이 활성화된 상태에서 노브를 수동으로 조절하면 preset 상태 리셋
+                if (presetActive) {
+                    resetPresetToDefault();
+                }
+                
                 // 플러그인 파라미터 업데이트
                 if (clearPlugin && pluginLoaded) {
                     // 노브 인덱스에 따른 파라미터 매핑
@@ -2315,8 +2320,8 @@ private:
         int textHeight = (int)g.getCurrentFont().getHeight();
         int textWidth = g.getCurrentFont().getStringWidth("sup clr");
         
-        // 박스와 텍스트 간격: 9px
-        int spacing = 9;
+        // 박스와 텍스트 간격: 8px (9px에서 1px 줄임)
+        int spacing = 8;
         
         // 로고셋 전체 너비 계산
         int logoSetWidth = boxSize + spacing + textWidth;
@@ -2328,9 +2333,26 @@ private:
         int boxX = logoSetX;
         int boxY = bottomAreaCenterY - boxSize/2 + 24 - 30; // bottom 영역 중앙 + 24px 아래로 - 30px 위로
         
-        // 17px x 17px 박스 그리기 (black 10% 투명도)
-        g.setColour(juce::Colours::black.withAlpha(0.1f));
-        g.fillRect(boxX, boxY, boxSize, boxSize);
+        // symbol.svg 로고 그리기 (17px x 17px, black 10% 투명도)
+        juce::File svgFile = juce::File::getCurrentWorkingDirectory().getParentDirectory().getChildFile("Resources/symbol.svg");
+        if (svgFile.existsAsFile()) {
+            std::unique_ptr<juce::Drawable> drawable = juce::Drawable::createFromSVGFile(svgFile);
+            if (drawable) {
+                g.setColour(juce::Colours::black.withAlpha(0.1f));
+                drawable->drawWithin(g, juce::Rectangle<float>(boxX, boxY, boxSize, boxSize), juce::RectanglePlacement::centred, 1.0f);
+                juce::Logger::writeToLog("SVG logo loaded successfully from: " + svgFile.getFullPathName());
+            } else {
+                juce::Logger::writeToLog("Failed to create drawable from SVG: " + svgFile.getFullPathName());
+                // SVG 로드 실패 시 기존 박스 그리기
+                g.setColour(juce::Colours::black.withAlpha(0.1f));
+                g.fillRect(boxX, boxY, boxSize, boxSize);
+            }
+        } else {
+            juce::Logger::writeToLog("SVG file not found: " + svgFile.getFullPathName());
+            // SVG 파일이 없으면 기존 박스 그리기
+            g.setColour(juce::Colours::black.withAlpha(0.1f));
+            g.fillRect(boxX, boxY, boxSize, boxSize);
+        }
         
         // 'sup clr' 텍스트 그리기 (28pt, black 10% 투명도, 텍스트만 위로 2px 추가 이동)
         g.setColour(juce::Colours::black.withAlpha(0.1f));
