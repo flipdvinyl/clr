@@ -28,3 +28,12 @@ target_link_libraries(ClearHost PRIVATE
     juce::juce_audio_basics
     juce::juce_audio_processors
 )
+
+# Resources 디렉토리 복사 (폰트 파일 포함)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Resources")
+    add_custom_command(TARGET ClearHost POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/Resources"
+        "$<TARGET_FILE_DIR:ClearHost>/Resources"
+    )
+endif()

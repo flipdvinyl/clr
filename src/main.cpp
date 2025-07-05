@@ -3,6 +3,45 @@
 
 // 기본 투명도 설정 (80%)
 static constexpr float DEFAULT_ALPHA = 0.8f;
+// 폰트 크기 상수 정의
+static constexpr float DEFAULT_FONT_SIZE = 16.0f;
+
+void drawDropdownList(juce::Graphics& g,
+                      const std::vector<juce::String>& items,
+                      const juce::String& selectedItem,
+                      juce::Rectangle<int> dropdownRect,
+                      int scrollOffset,
+                      int maxVisible,
+                      int itemHeight,
+                      std::vector<juce::Rectangle<int>>& outRects,
+                      juce::Justification textJustify,
+                      int textPad = 0) {
+    outRects.clear();
+    int visibleCount = std::min(maxVisible, (int)items.size() - scrollOffset);
+    g.setFont(juce::Font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain));
+    for (int i = 0; i < visibleCount; ++i) {
+        int actualIndex = i + scrollOffset;
+        juce::Rectangle<int> itemRect(dropdownRect.getX(), dropdownRect.getY() + i * itemHeight, dropdownRect.getWidth(), itemHeight);
+        outRects.push_back(itemRect);
+        bool isSelected = (items[actualIndex] == selectedItem);
+        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+        g.drawText(items[actualIndex], itemRect.reduced(textPad, 0), textJustify);
+        if (isSelected) {
+            int textWidth = g.getCurrentFont().getStringWidth(items[actualIndex]);
+            int underlineY = itemRect.getY() + 15;
+            int underlineX;
+            if (textJustify == juce::Justification::centredRight) {
+                underlineX = itemRect.getX() + itemRect.getWidth() - textWidth - textPad;
+            } else if (textJustify == juce::Justification::centred) {
+                underlineX = itemRect.getX() + (itemRect.getWidth() - textWidth) / 2;
+            } else {
+                underlineX = itemRect.getX() + textPad;
+            }
+            g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+            g.drawLine(underlineX, underlineY, underlineX + textWidth, underlineY, 1.0f);
+        }
+    }
+}
 
 class EuclidLookAndFeel : public juce::LookAndFeel_V4 {
 public:
@@ -113,7 +152,7 @@ public:
         // 노브 원
         float cx = area.getCentreX();
         float cy = area.getCentreY();
-        float radius = 20.0f;
+        float radius = 19.0f;
         g.setColour(knobColour);
         g.fillEllipse(cx - radius, cy - radius, radius * 2, radius * 2);
         // 인디케이터 - Face 색상 사용
@@ -125,8 +164,8 @@ public:
         float angle = minAngle + normalizedValue * (maxAngle - minAngle);
         float startX = cx + std::cos(angle) * (radius + 1.0f);
         float startY = cy + std::sin(angle) * (radius + 1.0f);
-        float endX = cx + std::cos(angle) * (radius - 15.0f);
-        float endY = cy + std::sin(angle) * (radius - 15.0f);
+        float endX = cx + std::cos(angle) * (radius - DEFAULT_FONT_SIZE);
+        float endY = cy + std::sin(angle) * (radius - DEFAULT_FONT_SIZE);
         g.setColour(indicatorColour); // Face 색상으로 변경
         g.drawLine(startX, startY, endX, endY, 4.0f);
         
@@ -136,7 +175,7 @@ public:
         int labelX = area.getX();
         int labelY = static_cast<int>(cy + radius - 1); // 노브 원 아래 -1px (2px 아래)
         g.setColour(labelColour);
-        g.setFont(juce::Font("Euclid Circular B", 16.0f, juce::Font::plain));
+        g.setFont(juce::Font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain));
         
         juce::String displayText;
         if (showValue) {
@@ -204,7 +243,7 @@ public:
         : text(text), position(position), alpha(alpha) {}
     void draw(juce::Graphics& g) const {
         g.setColour(juce::Colours::black.withAlpha(alpha));
-        g.setFont(juce::Font("Euclid Circular B", 15.0f, juce::Font::plain));
+        g.setFont(juce::Font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain));
         
         // 텍스트 크기 계산
         int textW = g.getCurrentFont().getStringWidth(text);
@@ -222,7 +261,7 @@ public:
     }
     bool hitTest(juce::Point<int> pos) const { 
         // 텍스트 크기에 맞춰서 상하좌우 3px 확장
-        juce::Font font("Euclid Circular B", 15.0f, juce::Font::plain);
+        juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         int textW = font.getStringWidth(text);
         int textH = (int)font.getHeight();
         return juce::Rectangle<int>(position.x - 3, position.y - 3, textW + 6, textH + 6).contains(pos); 
@@ -322,7 +361,7 @@ public:
         int stereoY = center.y - 51; // 노브 클러스터 중앙에서 위로 51px (1px 더 위로 이동)
         
         // 텍스트 크기에 맞춰서 위치 계산
-        g.setFont(juce::Font("Euclid Circular B", 15.0f, juce::Font::plain));
+        g.setFont(juce::Font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain));
         int textW = g.getCurrentFont().getStringWidth(stereoText);
         int textH = (int)g.getCurrentFont().getHeight();
         int stereoStartX = stereoX - textW/2;
@@ -369,20 +408,22 @@ public:
 
 class Preset {
 public:
-    Preset(juce::Colour faceColor) : faceColor(faceColor), ledOn(false) {}
+    Preset(juce::Colour faceColor) : faceColor(faceColor), ledOn(false), labelText("preset") {}
     void setLedOn(bool on) { ledOn = on; }
+    void setLabelText(const juce::String& text) { labelText = text; }
+    juce::String getLabelText() const { return labelText; }
     
     void draw(juce::Graphics& g, int buttonY) const {
-        juce::Font font("Euclid Circular B", 15.0f, juce::Font::plain);
+        juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         
-        // preset 텍스트와 언더라인 그리기
-        int presetTextWidth = font.getStringWidth("preset");
+        // 동적 레이블 텍스트와 언더라인 그리기
+        int presetTextWidth = font.getStringWidth(labelText);
         int presetX = 80 - presetTextWidth / 2; // 80px 중앙에서 텍스트 중앙 정렬
         
         // preset 텍스트 그리기 (기본 알파값 적용)
         g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
         g.setFont(font);
-        g.drawText("preset", presetX, buttonY, presetTextWidth, 20, juce::Justification::centredLeft);
+        g.drawText(labelText, presetX, buttonY, presetTextWidth, 20, juce::Justification::centredLeft);
         
         // preset 언더라인 그리기 (100% 투명도)
         g.setColour(juce::Colours::black);
@@ -398,39 +439,39 @@ public:
         g.fillEllipse(ledX - 3, ledY - 3, 6, 6);
         
         // preset 글자 오른쪽에 풀다운 버튼 배치 (제일 오른쪽 글자에서 오른쪽으로 8px, 그리고 왼쪽으로 6px 이동, 그리고 오른쪽으로 2px, 그리고 왼쪽으로 1px 이동, 아래로 5px 이동)
-        int presetRightX = presetX + presetTextWidth; // preset 텍스트의 오른쪽 끝
-        int dropdownX = presetRightX + 8 - 6 + 2 - 1; // preset 오른쪽 끝에서 오른쪽으로 8px, 그리고 왼쪽으로 6px 이동, 그리고 오른쪽으로 2px 이동, 그리고 왼쪽으로 1px 이동
+        // int presetRightX = presetX + presetTextWidth; // preset 텍스트의 오른쪽 끝
+        // int dropdownX = presetRightX + 8 - 6 + 2 - 1; // preset 오른쪽 끝에서 오른쪽으로 8px, 그리고 왼쪽으로 6px 이동, 그리고 오른쪽으로 2px 이동, 그리고 왼쪽으로 1px 이동
         
         // preset 텍스트의 x-height 기준으로 세로 중앙 정렬, 그리고 아래로 5px 이동
         // x-height는 보통 폰트 높이의 약 60% 정도
-        float xHeight = font.getHeight() * 0.6f;
-        int dropdownY = buttonY + (20 - xHeight) / 2 + 5; // 20px 버튼 높이에서 x-height 기준 중앙 정렬, 그리고 아래로 5px 이동
+        // float xHeight = font.getHeight() * 0.6f;
+        // int dropdownY = buttonY + (20 - xHeight) / 2 + 5; // 20px 버튼 높이에서 x-height 기준 중앙 정렬, 그리고 아래로 5px 이동
         
-        // 풀다운 버튼 그리기 (벡터 도형으로 V 모양 삼각형, 40% 스케일, 아래쪽으로 뾰족하게)
-        g.setColour(juce::Colours::black);
-        juce::Path dropdownPath;
+        // 풀다운 버튼 그리기 (벡터 도형으로 V 모양 삼각형, 40% 스케일, 아래쪽으로 뾰족하게) - 히든 처리
+        // g.setColour(juce::Colours::black);
+        // juce::Path dropdownPath;
         // 원래 크기: 16px 너비, 8px 높이
         // 40% 스케일: 6.4px 너비, 3.2px 높이
-        float scale = 0.4f;
-        float width = 16.0f * scale; // 6.4px
-        float height = 8.0f * scale; // 3.2px
+        // float scale = 0.4f;
+        // float width = 16.0f * scale; // 6.4px
+        // float height = 8.0f * scale; // 3.2px
         
-        dropdownPath.startNewSubPath(dropdownX, dropdownY); // 왼쪽 상단
-        dropdownPath.lineTo(dropdownX + width/2, dropdownY + height); // 중앙 하단
-        dropdownPath.lineTo(dropdownX + width, dropdownY); // 오른쪽 상단
-        g.strokePath(dropdownPath, juce::PathStrokeType(1.0f));
+        // dropdownPath.startNewSubPath(dropdownX, dropdownY); // 왼쪽 상단
+        // dropdownPath.lineTo(dropdownX + width/2, dropdownY + height); // 중앙 하단
+        // dropdownPath.lineTo(dropdownX + width, dropdownY); // 오른쪽 상단
+        // g.strokePath(dropdownPath, juce::PathStrokeType(1.0f));
     }
     
     bool hitTestPresetButton(juce::Point<int> pos, int buttonY) const {
-        juce::Font font("Euclid Circular B", 15.0f, juce::Font::plain);
-        int presetTextWidth = font.getStringWidth("preset");
+        juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
+        int presetTextWidth = font.getStringWidth(labelText);
         int presetX = 80 - presetTextWidth / 2;
-        return juce::Rectangle<int>(presetX, buttonY, presetTextWidth, 20).contains(pos);
+        return juce::Rectangle<int>(presetX - 5, buttonY - 5, presetTextWidth + 10, 20 + 10).contains(pos);
     }
     
     bool hitTestPresetDropdownButton(juce::Point<int> pos, int buttonY) const {
-        juce::Font font("Euclid Circular B", 15.0f, juce::Font::plain);
-        int presetTextWidth = font.getStringWidth("preset");
+        juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
+        int presetTextWidth = font.getStringWidth(labelText);
         int presetX = 80 - presetTextWidth / 2;
         int presetRightX = presetX + presetTextWidth;
         int dropdownX = presetRightX + 8 - 6 + 2 - 1; // 왼쪽으로 6px 이동, 그리고 오른쪽으로 2px 이동, 그리고 왼쪽으로 1px 이동
@@ -450,6 +491,7 @@ public:
 private:
     juce::Colour faceColor;
     bool ledOn;
+    juce::String labelText;
 };
 
 class Bottom {
@@ -464,7 +506,7 @@ public:
         // 세퍼레이터 기준 아래로 23px 위치에서 위로 10px 이동, 그리고 위로 8px 더 이동, 그리고 위로 2px 더 이동 (세퍼레이터 Y=126, 높이 4px)
         int buttonY = 126 + 4 + 23 - 10 - 8 - 2; // 세퍼레이터 아래 끝 + 23px - 10px - 8px - 2px
         
-        juce::Font font("Euclid Circular B", 15.0f, juce::Font::plain);
+        juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         
         // in 버튼 - 좌측 정렬, 세퍼레이터 왼쪽 끝에서 우측으로 2px 이동, 텍스트는 기본 알파값의 절반, 언더라인은 기본 알파값
         int inX = 8 + 2; // 세퍼레이터 왼쪽 끝 + 2px
@@ -503,17 +545,17 @@ public:
     bool hitTestInButton(juce::Point<int> pos) const {
         int buttonY = 126 + 4 + 23 - 10 - 8 - 2;
         int inX = 8 + 2;
-        juce::Font font("Euclid Circular B", 15.0f, juce::Font::plain);
+        juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         int inTextWidth = font.getStringWidth("in");
-        return juce::Rectangle<int>(inX, buttonY, inTextWidth, 20).contains(pos);
+        return juce::Rectangle<int>(inX - 5, buttonY - 5, inTextWidth + 10, 20 + 10).contains(pos);
     }
     
     bool hitTestOutButton(juce::Point<int> pos) const {
         int buttonY = 126 + 4 + 23 - 10 - 8 - 2;
-        juce::Font font("Euclid Circular B", 15.0f, juce::Font::plain);
+        juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         int outTextWidth = font.getStringWidth("out");
         int outX = 152 - outTextWidth - 2;
-        return juce::Rectangle<int>(outX, buttonY, outTextWidth, 20).contains(pos);
+        return juce::Rectangle<int>(outX - 5, buttonY - 5, outTextWidth + 10, 20 + 10).contains(pos);
     }
     
     bool hitTestPresetButton(juce::Point<int> pos) const {
@@ -528,11 +570,13 @@ public:
     
     bool hitTestBypassButton(juce::Point<int> pos) const {
         int bypassY = 270 - 4 - 20;
-        juce::Font font("Euclid Circular B", 15.0f, juce::Font::plain);
+        juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         int bypassTextWidth = font.getStringWidth("bypass");
         int bypassX = 80 - bypassTextWidth / 2;
         return juce::Rectangle<int>(bypassX, bypassY, bypassTextWidth, 20).contains(pos);
     }
+    
+    Preset& getPreset() { return preset; }
     
 private:
     juce::Colour faceColor;
@@ -546,6 +590,12 @@ public:
         animationDuration = 1.0;
         animationTimerInterval = 16;
         originalSystemOutputDevice = "";
+        
+        // 장치 설정 파일 초기화
+        deviceSettingsFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                            .getChildFile("ClearHost")
+                            .getChildFile("device_settings.conf");
+        
         static EuclidLookAndFeel euclidLF;
         juce::LookAndFeel::setDefaultLookAndFeel(&euclidLF);
         
@@ -651,6 +701,18 @@ public:
         // 드롭다운용 장치 리스트 초기화
         updateInputDeviceList();
         updateOutputDeviceList();
+        updatePresetList();
+        
+        // 저장된 장치 설정 로드
+        loadDeviceSettings();
+        
+        // 저장된 설정 적용 또는 기본 장치 설정
+        if (currentInputDevice.isEmpty() && !inputDeviceList.empty()) {
+            currentInputDevice = inputDeviceList[0];
+        }
+        if (currentOutputDevice.isEmpty() && !outputDeviceList.empty()) {
+            currentOutputDevice = outputDeviceList[0];
+        }
         
         // 라벨 설정
         inputDeviceLabel.setText("Audio Input:", juce::dontSendNotification);
@@ -677,12 +739,24 @@ public:
         // 드롭다운 관련 변수들
         inputDropdownOpen = false;
         outputDropdownOpen = false;
+        presetDropdownOpen = false;
         inputDeviceList.clear();
         outputDeviceList.clear();
+        presetList.clear();
         inputDropdownRect = juce::Rectangle<int>();
         outputDropdownRect = juce::Rectangle<int>();
+        presetDropdownRect = juce::Rectangle<int>();
         inputDeviceRects.clear();
         outputDeviceRects.clear();
+        presetRects.clear();
+        
+        // Preset 상태 초기화
+        presetActive = false;
+        activePresetName = "";
+        currentPreset = "";
+        
+        // 초기 preset 표시 업데이트
+        updatePresetDisplay();
     }
     ~ClearHostApp() override {
         if (clearPlugin) {
@@ -755,6 +829,9 @@ public:
         if (face) {
             face->draw(g);
         }
+        
+        // 로고 그리기 (Face 바로 위, Panel 아래)
+        drawLogo(g);
         // 2단: 가운데 영역 (footer 내용)
         juce::Rectangle<int> centerArea(col1, 0, col2, h);
         g.setColour(juce::Colours::darkgrey.darker());
@@ -779,6 +856,89 @@ public:
         if (bottom) {
             bottom->draw(g);
         }
+        
+        // 입력 드롭다운이 열려있으면 장치 리스트 표시 (in 버튼 바로 아래)
+        if (inputDropdownOpen) {
+            int inButtonY = 126 + 4 + 23 - 10 - 8 - 2;
+            int dropdownY = inButtonY + 21;
+            int dropdownHeight = std::min(MAX_VISIBLE_ITEMS * ITEM_HEIGHT, (int)inputDeviceList.size() * ITEM_HEIGHT);
+            inputDropdownRect = juce::Rectangle<int>(10, dropdownY, 140, dropdownHeight);
+            
+            inputDeviceRects.clear();
+            int visibleCount = std::min(MAX_VISIBLE_ITEMS, (int)inputDeviceList.size() - inputScrollOffset);
+            
+            for (int i = 0; i < visibleCount; ++i) {
+                int actualIndex = i + inputScrollOffset;
+                juce::Rectangle<int> itemRect(inputDropdownRect.getX(), inputDropdownRect.getY() + i * ITEM_HEIGHT, inputDropdownRect.getWidth(), ITEM_HEIGHT);
+                inputDeviceRects.push_back(itemRect);
+                
+                // 현재 선택된 장치인지 확인
+                bool isSelected = (inputDeviceList[actualIndex] == currentInputDevice);
+                
+                // 배경색 완전 투명 (그리지 않음)
+                g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+                g.drawText(inputDeviceList[actualIndex], itemRect, juce::Justification::centredLeft);
+                
+                // 현재 선택된 장치에 언더라인 그리기
+                if (isSelected) {
+                    // 현재 설정된 폰트 사용 (텍스트 그리기와 동일한 폰트)
+                    int textWidth = g.getCurrentFont().getStringWidth(inputDeviceList[actualIndex]);
+                    int underlineY = itemRect.getY() + 15; // 텍스트 아래 3px (1px 아래로 이동)
+                    int underlineX = itemRect.getX(); // 오른쪽으로 1px 이동 (-1px -> 0px)
+                    g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+                    g.drawLine(underlineX, underlineY, underlineX + textWidth, underlineY, 1.0f);
+                }
+            }
+        }
+        
+        // 출력 드롭다운이 열려있으면 장치 리스트 표시 (out 버튼 바로 아래)
+        if (outputDropdownOpen) {
+            // out 버튼 바로 아래 위치 계산 (Bottom 클래스의 out 버튼 위치 참조)
+            int outButtonY = 126 + 4 + 23 - 10 - 8 - 2; // Bottom 클래스의 실제 out 버튼 Y 위치
+            int dropdownY = outButtonY + 21; // out 버튼 바로 아래 20px + 2px - 1px (위로 1px 이동)
+            
+            // 드롭다운 높이를 최대 5개 아이템으로 제한
+            int dropdownHeight = std::min(MAX_VISIBLE_ITEMS * ITEM_HEIGHT, (int)outputDeviceList.size() * ITEM_HEIGHT);
+            outputDropdownRect = juce::Rectangle<int>(10, dropdownY, 140, dropdownHeight);
+            
+            outputDeviceRects.clear();
+            int visibleCount = std::min(MAX_VISIBLE_ITEMS, (int)outputDeviceList.size() - outputScrollOffset);
+            
+            for (int i = 0; i < visibleCount; ++i) {
+                int actualIndex = i + outputScrollOffset;
+                juce::Rectangle<int> itemRect(outputDropdownRect.getX(), outputDropdownRect.getY() + i * ITEM_HEIGHT, outputDropdownRect.getWidth(), ITEM_HEIGHT);
+                outputDeviceRects.push_back(itemRect);
+                
+                // 현재 선택된 장치인지 확인
+                bool isSelected = (outputDeviceList[actualIndex] == currentOutputDevice);
+                
+                // 배경색 완전 투명 (그리지 않음)
+                g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+                g.drawText(outputDeviceList[actualIndex], itemRect, juce::Justification::centredRight);
+                
+                // 현재 선택된 장치에 언더라인 그리기
+                if (isSelected) {
+                    // 현재 설정된 폰트 사용 (텍스트 그리기와 동일한 폰트)
+                    int textWidth = g.getCurrentFont().getStringWidth(outputDeviceList[actualIndex]);
+                    int underlineY = itemRect.getY() + 15; // 텍스트 아래 3px (1px 아래로 이동)
+                    int underlineX = itemRect.getX() + itemRect.getWidth() - textWidth; // 왼쪽으로 1px 이동 (+1px -> 0px)
+                    g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+                    g.drawLine(underlineX, underlineY, underlineX + textWidth, underlineY, 1.0f);
+                }
+            }
+        }
+        
+        // preset 드롭다운이 열려있으면 프리셋 리스트 표시 (preset 버튼 바로 아래, 중앙 정렬)
+        if (presetDropdownOpen) {
+            int presetButtonY = 126 + 4 + 23 - 10 - 8 - 2;
+            int dropdownY = presetButtonY + 21;
+            int dropdownHeight = std::min(MAX_VISIBLE_ITEMS * ITEM_HEIGHT, (int)presetList.size() * ITEM_HEIGHT);
+            int dropdownWidth = 140;
+            int dropdownX = 80 - dropdownWidth / 2; // 중앙 80px 기준으로 정렬
+            presetDropdownRect = juce::Rectangle<int>(dropdownX, dropdownY, dropdownWidth, dropdownHeight);
+            drawDropdownList(g, presetList, currentPreset, presetDropdownRect, presetScrollOffset, MAX_VISIBLE_ITEMS, ITEM_HEIGHT, presetRects, juce::Justification::centred, 0);
+        }
+        
         // 프리셋 버튼 7개 (2줄) - TextButtonLike 스타일로 변경
         int btnW = 100, btnH = 30, btnSpacing = 20;
         int btnY1 = centerArea.getY() + 180;
@@ -794,62 +954,7 @@ public:
             TextButtonLike presetBtn(btnNames[i], juce::Point<int>(btnX, btnY), DEFAULT_ALPHA);
             presetBtn.draw(g);
         }
-        // 장치 선택 박스
-        int deviceY = stereoMonoRect.getBottom() + 20;
-        inputDeviceRect = juce::Rectangle<int>(centerArea.getX() + 30, deviceY, 180, 30);
-        outputDeviceRect = juce::Rectangle<int>(centerArea.getX() + 230, deviceY, 180, 30);
-        
-        // 입력 장치 버튼
-        g.setColour(juce::Colours::lightblue);
-        g.fillRect(inputDeviceRect);
-        g.setColour(juce::Colours::black);
-        juce::String currentInput = inputDeviceList.empty() ? "Default Input" : inputDeviceList[0];
-        g.drawText(currentInput, inputDeviceRect, juce::Justification::centred);
-        
-        // 출력 장치 버튼
-        g.setColour(juce::Colours::lightgreen);
-        g.fillRect(outputDeviceRect);
-        g.setColour(juce::Colours::black);
-        juce::String currentOutput = outputDeviceList.empty() ? "Default Output" : outputDeviceList[0];
-        g.drawText(currentOutput, outputDeviceRect, juce::Justification::centred);
-        
-        // 입력 드롭다운이 열려있으면 장치 리스트 표시
-        if (inputDropdownOpen) {
-            inputDropdownRect = juce::Rectangle<int>(inputDeviceRect.getX(), inputDeviceRect.getBottom(), inputDeviceRect.getWidth(), 150);
-            g.setColour(juce::Colours::white);
-            g.fillRect(inputDropdownRect);
-            g.setColour(juce::Colours::black);
-            g.drawRect(inputDropdownRect);
-            
-            inputDeviceRects.clear();
-            for (int i = 0; i < inputDeviceList.size(); ++i) {
-                juce::Rectangle<int> itemRect(inputDropdownRect.getX(), inputDropdownRect.getY() + i * 25, inputDropdownRect.getWidth(), 25);
-                inputDeviceRects.push_back(itemRect);
-                g.setColour(juce::Colours::lightgrey);
-                g.fillRect(itemRect);
-                g.setColour(juce::Colours::black);
-                g.drawText(inputDeviceList[i], itemRect, juce::Justification::centredLeft);
-            }
-        }
-        
-        // 출력 드롭다운이 열려있으면 장치 리스트 표시
-        if (outputDropdownOpen) {
-            outputDropdownRect = juce::Rectangle<int>(outputDeviceRect.getX(), outputDeviceRect.getBottom(), outputDeviceRect.getWidth(), 150);
-            g.setColour(juce::Colours::white);
-            g.fillRect(outputDropdownRect);
-            g.setColour(juce::Colours::black);
-            g.drawRect(outputDropdownRect);
-            
-            outputDeviceRects.clear();
-            for (int i = 0; i < outputDeviceList.size(); ++i) {
-                juce::Rectangle<int> itemRect(outputDropdownRect.getX(), outputDropdownRect.getY() + i * 25, outputDropdownRect.getWidth(), 25);
-                outputDeviceRects.push_back(itemRect);
-                g.setColour(juce::Colours::lightgrey);
-                g.fillRect(itemRect);
-                g.setColour(juce::Colours::black);
-                g.drawText(outputDeviceList[i], itemRect, juce::Justification::centredLeft);
-            }
-        }
+
         
         // 3단: 오른쪽 플러그인 에디터 영역
         juce::Rectangle<int> rightArea(col1 + col2, 0, col3, h);
@@ -1076,6 +1181,14 @@ public:
     }
     
     void timerCallback() override {
+        static bool firstRun = true;
+        
+        if (firstRun) {
+            // 첫 실행 시 저장된 장치 설정 적용
+            applySavedDeviceSettings();
+            firstRun = false;
+        }
+        
         if (isAnimating) {
             double currentTime = juce::Time::getMillisecondCounterHiRes() / 1000.0;
             double elapsedTime = currentTime - animationStartTime;
@@ -1457,20 +1570,8 @@ public:
             }
         }
         
-        // Bottom 버튼들 클릭 처리
+        // Bottom 버튼들 클릭 처리 (in/out 버튼은 호버로 처리하므로 제거)
         if (bottom) {
-            if (bottom->hitTestInButton(pos)) {
-                juce::Logger::writeToLog("In button clicked");
-                // TODO: 입력 장치 관련 기능 구현
-                repaint();
-                return;
-            }
-            if (bottom->hitTestOutButton(pos)) {
-                juce::Logger::writeToLog("Out button clicked");
-                // TODO: 출력 장치 관련 기능 구현
-                repaint();
-                return;
-            }
             if (bottom->hitTestPresetButton(pos)) {
                 juce::Logger::writeToLog("Preset button clicked");
                 // TODO: 프리셋 관련 기능 구현
@@ -1551,37 +1652,20 @@ public:
                 return;
             }
         }
-        // 입력 장치 버튼 클릭
-        if (inputDeviceRect.contains(pos)) {
-            inputDropdownOpen = !inputDropdownOpen;
-            outputDropdownOpen = false; // 다른 드롭다운 닫기
-            if (inputDropdownOpen && inputDeviceList.empty()) {
-                updateInputDeviceList();
-            }
-            repaint();
-            return;
-        }
-        
-        // 출력 장치 버튼 클릭
-        if (outputDeviceRect.contains(pos)) {
-            outputDropdownOpen = !outputDropdownOpen;
-            inputDropdownOpen = false; // 다른 드롭다운 닫기
-            if (outputDropdownOpen && outputDeviceList.empty()) {
-                updateOutputDeviceList();
-            }
-            repaint();
-            return;
-        }
+
         
         // 입력 드롭다운 아이템 클릭
         if (inputDropdownOpen) {
             for (int i = 0; i < inputDeviceRects.size(); ++i) {
                 if (inputDeviceRects[i].contains(pos)) {
-                    juce::String selectedDevice = inputDeviceList[i];
-                    changeAudioInputDevice(selectedDevice);
-                    inputDropdownOpen = false;
-                    repaint();
-                    return;
+                    int actualIndex = i + inputScrollOffset;
+                    if (actualIndex < inputDeviceList.size()) {
+                        juce::String selectedDevice = inputDeviceList[actualIndex];
+                        changeAudioInputDevice(selectedDevice);
+                        inputDropdownOpen = false;
+                        repaint();
+                        return;
+                    }
                 }
             }
         }
@@ -1590,19 +1674,55 @@ public:
         if (outputDropdownOpen) {
             for (int i = 0; i < outputDeviceRects.size(); ++i) {
                 if (outputDeviceRects[i].contains(pos)) {
-                    juce::String selectedDevice = outputDeviceList[i];
-                    changeAudioOutputDevice(selectedDevice);
-                    outputDropdownOpen = false;
-                    repaint();
-                    return;
+                    int actualIndex = i + outputScrollOffset;
+                    if (actualIndex < outputDeviceList.size()) {
+                        juce::String selectedDevice = outputDeviceList[actualIndex];
+                        changeAudioOutputDevice(selectedDevice);
+                        outputDropdownOpen = false;
+                        repaint();
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // preset 드롭다운 아이템 클릭
+        if (presetDropdownOpen) {
+            for (int i = 0; i < presetRects.size(); ++i) {
+                if (presetRects[i].contains(pos)) {
+                    int actualIndex = i + presetScrollOffset;
+                    if (actualIndex < presetList.size()) {
+                        juce::String selectedPreset = presetList[actualIndex];
+                        currentPreset = selectedPreset; // 현재 선택된 프리셋 업데이트
+                        
+                        // preset 상태 활성화
+                        setPresetActive(true, selectedPreset);
+                        
+                        // 프리셋에 따른 애니메이션 실행
+                        if (selectedPreset == "s* up**") {
+                            startAnimation({0.5, 0.0, 0.0});
+                        } else if (selectedPreset == "too loud") {
+                            startAnimation({0.5, 0.2, 0.2});
+                        } else if (selectedPreset == "clear voice") {
+                            startAnimation({0.0, 0.5, 0.5});
+                        } else if (selectedPreset == "dry voice") {
+                            startAnimation({0.0, 0.5, 0.0});
+                        } else if (selectedPreset == "vocal ref") {
+                            startAnimation({0.5, 0.1, 0.1});
+                        }
+                        presetDropdownOpen = false;
+                        repaint();
+                        return;
+                    }
                 }
             }
         }
         
         // 드롭다운 외부 클릭 시 드롭다운 닫기
-        if (inputDropdownOpen || outputDropdownOpen) {
+        if (inputDropdownOpen || outputDropdownOpen || presetDropdownOpen) {
             inputDropdownOpen = false;
             outputDropdownOpen = false;
+            presetDropdownOpen = false;
             repaint();
             return;
         }
@@ -1619,6 +1739,11 @@ public:
             if (isAnimating) {
                 animationTargetValues[draggingKnob] = knobValues[draggingKnob];
                 juce::Logger::writeToLog("Knob " + juce::String(draggingKnob) + " animation stopped by user interaction");
+            }
+            
+            // preset이 활성화된 상태에서 노브를 수동으로 조절하면 preset 상태 리셋
+            if (presetActive) {
+                resetPresetToDefault();
             }
             
             // 파라미터 반영
@@ -1647,27 +1772,167 @@ public:
         }
         draggingKnob = -1;
     }
+    
+    void mouseMove(const juce::MouseEvent& event) override {
+        auto pos = event.getPosition();
+        
+        // in 버튼에 호버
+        if (bottom && bottom->hitTestInButton(pos)) {
+            if (!inputDropdownOpen) {
+                juce::Logger::writeToLog("Mouse hover on in button - opening input dropdown");
+                inputDropdownOpen = true;
+                outputDropdownOpen = false; // 다른 드롭다운 닫기
+                inputScrollOffset = 0; // 드롭다운이 열릴 때 스크롤 오프셋 리셋
+                if (inputDeviceList.empty()) {
+                    updateInputDeviceList();
+                }
+                repaint();
+            }
+            return;
+        }
+        
+        // out 버튼에 호버
+        if (bottom && bottom->hitTestOutButton(pos)) {
+            if (!outputDropdownOpen) {
+                juce::Logger::writeToLog("Mouse hover on out button - opening output dropdown");
+                outputDropdownOpen = true;
+                inputDropdownOpen = false; // 다른 드롭다운 닫기
+                presetDropdownOpen = false; // 다른 드롭다운 닫기
+                outputScrollOffset = 0; // 드롭다운이 열릴 때 스크롤 오프셋 리셋
+                if (outputDeviceList.empty()) {
+                    updateOutputDeviceList();
+                }
+                repaint();
+            }
+            return;
+        }
+        
+        // preset 버튼에 호버
+        if (bottom && bottom->hitTestPresetButton(pos)) {
+            if (!presetDropdownOpen) {
+                juce::Logger::writeToLog("Mouse hover on preset button - opening preset dropdown");
+                presetDropdownOpen = true;
+                inputDropdownOpen = false; // 다른 드롭다운 닫기
+                outputDropdownOpen = false; // 다른 드롭다운 닫기
+                presetScrollOffset = 0; // 드롭다운이 열릴 때 스크롤 오프셋 리셋
+                if (presetList.empty()) {
+                    updatePresetList();
+                }
+                repaint();
+            }
+            return;
+        }
+        
+        // 드롭다운이 열려있을 때 마우스 위치 확인
+        if (inputDropdownOpen) {
+            // in 버튼이나 드롭다운 영역에 있지 않으면 드롭다운 닫기
+            if (!bottom->hitTestInButton(pos) && !inputDropdownRect.contains(pos)) {
+                juce::Logger::writeToLog("Mouse left input area - closing input dropdown");
+                inputDropdownOpen = false;
+                repaint();
+            }
+        }
+        
+        if (outputDropdownOpen) {
+            // out 버튼이나 드롭다운 영역에 있지 않으면 드롭다운 닫기
+            if (!bottom->hitTestOutButton(pos) && !outputDropdownRect.contains(pos)) {
+                juce::Logger::writeToLog("Mouse left output area - closing output dropdown");
+                outputDropdownOpen = false;
+                repaint();
+            }
+        }
+        
+        if (presetDropdownOpen) {
+            // preset 버튼이나 드롭다운 영역에 있지 않으면 드롭다운 닫기
+            if (!bottom->hitTestPresetButton(pos) && !presetDropdownRect.contains(pos)) {
+                juce::Logger::writeToLog("Mouse left preset area - closing preset dropdown");
+                presetDropdownOpen = false;
+                repaint();
+            }
+        }
+    }
+    
+    void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override {
+        auto pos = event.getPosition();
+        
+        // 입력 드롭다운 스크롤
+        if (inputDropdownOpen && inputDropdownRect.contains(pos)) {
+            if (inputDeviceList.size() > MAX_VISIBLE_ITEMS) {
+                int delta = (wheel.deltaY > 0) ? -1 : 1;
+                int newOffset = inputScrollOffset + delta;
+                int maxOffset = (int)inputDeviceList.size() - MAX_VISIBLE_ITEMS;
+                inputScrollOffset = juce::jlimit(0, maxOffset, newOffset);
+                repaint();
+            }
+        }
+        
+        // 출력 드롭다운 스크롤
+        if (outputDropdownOpen && outputDropdownRect.contains(pos)) {
+            if (outputDeviceList.size() > MAX_VISIBLE_ITEMS) {
+                int delta = (wheel.deltaY > 0) ? -1 : 1;
+                int newOffset = outputScrollOffset + delta;
+                int maxOffset = (int)outputDeviceList.size() - MAX_VISIBLE_ITEMS;
+                outputScrollOffset = juce::jlimit(0, maxOffset, newOffset);
+                repaint();
+            }
+        }
+        
+        // preset 드롭다운 스크롤
+        if (presetDropdownOpen && presetDropdownRect.contains(pos)) {
+            if (presetList.size() > MAX_VISIBLE_ITEMS) {
+                int delta = (wheel.deltaY > 0) ? -1 : 1;
+                int newOffset = presetScrollOffset + delta;
+                int maxOffset = (int)presetList.size() - MAX_VISIBLE_ITEMS;
+                presetScrollOffset = juce::jlimit(0, maxOffset, newOffset);
+                repaint();
+            }
+        }
+    }
 
     void updateOutputDeviceList() {
         outputDeviceList.clear();
-        outputDeviceList.push_back("Default Output");
         
         auto* deviceType = deviceManager.getCurrentDeviceTypeObject();
         if (deviceType) {
             try {
                 auto outputNames = deviceType->getDeviceNames(false); // false = output devices
                 for (int i = 0; i < outputNames.size(); ++i) {
-                    outputDeviceList.push_back(outputNames[i]);
+                    // BlackHole 2ch는 숨김 처리
+                    if (!outputNames[i].contains("BlackHole 2ch")) {
+                        outputDeviceList.push_back(outputNames[i].toLowerCase());
+                    }
                 }
+                
+                // 외장 헤드폰이 목록에 없으면 강제로 추가
+                bool externalHeadphonesFound = false;
+                for (int i = 0; i < outputNames.size(); ++i) {
+                    if (outputNames[i].contains("외장 헤드폰") || 
+                        outputNames[i].contains("External Headphones") ||
+                        outputNames[i].contains("Headphones")) {
+                        externalHeadphonesFound = true;
+                        break;
+                    }
+                }
+                
+                if (!externalHeadphonesFound) {
+                    outputDeviceList.push_back("외장 헤드폰 (manual)");
+                }
+                
             } catch (...) {
                 juce::Logger::writeToLog("Error getting output device names");
             }
+        }
+        
+        // 기본 출력 장치를 첫 번째로 설정
+        if (!outputDeviceList.empty()) {
+            currentOutputDevice = outputDeviceList[0];
         }
     }
     
     void updateInputDeviceList() {
         inputDeviceList.clear();
-        inputDeviceList.push_back("Default Input");
+        
+        bool blackHoleFound = false;
         
         auto* deviceType = deviceManager.getCurrentDeviceTypeObject();
         if (deviceType) {
@@ -1676,15 +1941,122 @@ public:
                 for (int i = 0; i < inputNames.size(); ++i) {
                     juce::String deviceName = inputNames[i];
                     if (deviceName.contains("BlackHole") || deviceName.contains("blackhole")) {
-                        inputDeviceList.push_back("OS Sound (BlackHole)");
+                        inputDeviceList.push_back("system sound / blackhole");
+                        blackHoleFound = true;
                     } else {
-                        inputDeviceList.push_back(deviceName);
+                        inputDeviceList.push_back(deviceName.toLowerCase());
                     }
                 }
             } catch (...) {
                 juce::Logger::writeToLog("Error getting input device names");
             }
         }
+        
+        // BlackHole이 없으면 비활성화된 옵션 추가
+        if (!blackHoleFound) {
+            inputDeviceList.push_back("system sound / blackhole - not installed");
+        }
+        
+        // 기본 입력 장치를 첫 번째로 설정
+        if (!inputDeviceList.empty()) {
+            currentInputDevice = inputDeviceList[0];
+        }
+    }
+    
+    void updatePresetList() {
+        presetList.clear();
+        presetList.push_back("s* up**");
+        presetList.push_back("too loud");
+        presetList.push_back("clear voice");
+        presetList.push_back("dry voice");
+        presetList.push_back("vocal ref");
+        
+        // 기본 프리셋을 첫 번째로 설정
+        if (!presetList.empty()) {
+            currentPreset = presetList[0];
+        }
+    }
+    
+    void saveDeviceSettings() {
+        if (!deviceSettingsFile.existsAsFile()) {
+            deviceSettingsFile.create();
+        }
+        
+        juce::PropertiesFile settings(deviceSettingsFile, juce::PropertiesFile::Options());
+        settings.setValue("lastInputDevice", currentInputDevice);
+        settings.setValue("lastOutputDevice", currentOutputDevice);
+        settings.save();
+        
+        juce::Logger::writeToLog("Device settings saved - Input: " + currentInputDevice + ", Output: " + currentOutputDevice);
+    }
+    
+    void loadDeviceSettings() {
+        if (deviceSettingsFile.existsAsFile()) {
+            juce::PropertiesFile settings(deviceSettingsFile, juce::PropertiesFile::Options());
+            juce::String savedInputDevice = settings.getValue("lastInputDevice", "");
+            juce::String savedOutputDevice = settings.getValue("lastOutputDevice", "");
+            
+            if (savedInputDevice.isNotEmpty()) {
+                currentInputDevice = savedInputDevice;
+                juce::Logger::writeToLog("Loaded saved input device: " + currentInputDevice);
+            }
+            
+            if (savedOutputDevice.isNotEmpty()) {
+                currentOutputDevice = savedOutputDevice;
+                juce::Logger::writeToLog("Loaded saved output device: " + currentOutputDevice);
+            }
+        }
+    }
+    
+    void applySavedDeviceSettings() {
+        // 저장된 입력 장치 적용
+        if (currentInputDevice.isNotEmpty()) {
+            bool deviceFound = false;
+            for (const auto& device : inputDeviceList) {
+                if (device == currentInputDevice) {
+                    deviceFound = true;
+                    break;
+                }
+            }
+            
+            if (deviceFound) {
+                changeAudioInputDevice(currentInputDevice);
+                juce::Logger::writeToLog("Applied saved input device: " + currentInputDevice);
+            } else {
+                // 저장된 장치가 없으면 첫 번째 장치 사용
+                if (!inputDeviceList.empty()) {
+                    currentInputDevice = inputDeviceList[0];
+                    changeAudioInputDevice(currentInputDevice);
+                    juce::Logger::writeToLog("Saved input device not found, using first available: " + currentInputDevice);
+                }
+            }
+        }
+        
+        // 저장된 출력 장치 적용
+        if (currentOutputDevice.isNotEmpty()) {
+            bool deviceFound = false;
+            for (const auto& device : outputDeviceList) {
+                if (device == currentOutputDevice) {
+                    deviceFound = true;
+                    break;
+                }
+            }
+            
+            if (deviceFound) {
+                changeAudioOutputDevice(currentOutputDevice);
+                juce::Logger::writeToLog("Applied saved output device: " + currentOutputDevice);
+            } else {
+                // 저장된 장치가 없으면 첫 번째 장치 사용
+                if (!outputDeviceList.empty()) {
+                    currentOutputDevice = outputDeviceList[0];
+                    changeAudioOutputDevice(currentOutputDevice);
+                    juce::Logger::writeToLog("Saved output device not found, using first available: " + currentOutputDevice);
+                }
+            }
+        }
+        
+        // ComboBox도 업데이트
+        updateAudioDeviceLists();
     }
 
 private:
@@ -1720,6 +2092,9 @@ private:
     // 첫 실행 여부 확인용 파일 경로
     juce::File firstRunFile;
     
+    // 장치 설정 저장용 파일 경로
+    juce::File deviceSettingsFile;
+    
     std::vector<juce::Rectangle<int>> knobRects;
     std::vector<float> knobValues;
     std::vector<bool> knobShowValues; // 노브 값 표시 상태
@@ -1735,12 +2110,32 @@ private:
     // 드롭다운 관련 변수들
     bool inputDropdownOpen = false;
     bool outputDropdownOpen = false;
+    bool presetDropdownOpen = false;
     std::vector<juce::String> inputDeviceList;
     std::vector<juce::String> outputDeviceList;
+    std::vector<juce::String> presetList;
     juce::Rectangle<int> inputDropdownRect;
     juce::Rectangle<int> outputDropdownRect;
+    juce::Rectangle<int> presetDropdownRect;
     std::vector<juce::Rectangle<int>> inputDeviceRects;
     std::vector<juce::Rectangle<int>> outputDeviceRects;
+    std::vector<juce::Rectangle<int>> presetRects;
+    
+    // 스크롤 관련 변수들
+    int inputScrollOffset = 0;
+    int outputScrollOffset = 0;
+    int presetScrollOffset = 0;
+    const int MAX_VISIBLE_ITEMS = 5;
+    const int ITEM_HEIGHT = 16;
+    
+    // 현재 선택된 장치 추적
+    juce::String currentInputDevice;
+    juce::String currentOutputDevice;
+    juce::String currentPreset;
+    
+    // Preset 상태 관리
+    bool presetActive = false; // preset이 활성화되었는지 여부
+    juce::String activePresetName = ""; // 현재 활성화된 preset 이름
     
     // LED 상태 표시
     std::unique_ptr<LED> pluginStatusLED;
@@ -1879,13 +2274,79 @@ private:
         updateLEDState();
     }
     
+    // Preset 상태 관리 메서드들
+    void setPresetActive(bool active, const juce::String& presetName = "") {
+        presetActive = active;
+        activePresetName = presetName;
+        updatePresetDisplay();
+    }
+    
+    void updatePresetDisplay() {
+        if (bottom) {
+            Preset& preset = bottom->getPreset();
+            if (presetActive && activePresetName.isNotEmpty()) {
+                // preset이 활성화된 경우: 레이블을 preset 이름으로 변경, LED ON
+                preset.setLabelText(activePresetName);
+                preset.setLedOn(true);
+            } else {
+                // preset이 비활성화된 경우: 레이블을 "preset"으로 변경, LED OFF
+                preset.setLabelText("preset");
+                preset.setLedOn(false);
+            }
+            repaint();
+        }
+    }
+    
+    void resetPresetToDefault() {
+        setPresetActive(false);
+    }
+    
+    void drawLogo(juce::Graphics& g) {
+        // bottom 영역의 정중앙 계산
+        // 세퍼레이터 아래쪽: Y = 126 + 4 = 130
+        // Face 아래쪽: Y = 270
+        // Bottom 영역 중앙: Y = (130 + 270) / 2 = 200
+        int bottomAreaCenterY = 200;
+        
+        // 박스 크기: 17px x 17px (원본)
+        int boxSize = 17;
+        
+        // 텍스트 크기 계산 (30pt - 2pt = 28pt)
+        g.setFont(juce::Font("Euclid Circular B", 28.0f, juce::Font::plain));
+        int textHeight = (int)g.getCurrentFont().getHeight();
+        int textWidth = g.getCurrentFont().getStringWidth("sup clr");
+        
+        // 박스와 텍스트 간격: 9px
+        int spacing = 9;
+        
+        // 로고셋 전체 너비 계산
+        int logoSetWidth = boxSize + spacing + textWidth;
+        
+        // 로고셋 전체를 80px 중앙에 정렬
+        int logoSetX = 80 - logoSetWidth / 2;
+        
+        // 박스 위치 (아래로 24px 이동, 전체 위로 30px 이동)
+        int boxX = logoSetX;
+        int boxY = bottomAreaCenterY - boxSize/2 + 24 - 30; // bottom 영역 중앙 + 24px 아래로 - 30px 위로
+        
+        // 17px x 17px 박스 그리기 (black 10% 투명도)
+        g.setColour(juce::Colours::black.withAlpha(0.1f));
+        g.fillRect(boxX, boxY, boxSize, boxSize);
+        
+        // 'sup clr' 텍스트 그리기 (28pt, black 10% 투명도, 텍스트만 위로 2px 추가 이동)
+        g.setColour(juce::Colours::black.withAlpha(0.1f));
+        g.setFont(juce::Font("Euclid Circular B", 28.0f, juce::Font::plain));
+        int textX = boxX + boxSize + spacing; // 박스 오른쪽 + 8px 여백
+        int textY = boxY + boxSize/2 - textHeight/2 - 2; // 박스 세로 중앙에 텍스트 세로 중앙 정렬 - 2px 위로
+        g.drawText("sup clr", textX, textY, textWidth, textHeight, juce::Justification::centredLeft);
+    }
+    
     void updateAudioDeviceLists() {
         // 현재 활성화된 오디오 장치 타입 사용
         auto* deviceType = deviceManager.getCurrentDeviceTypeObject();
         
         // 입력 장치 목록 업데이트
         inputDeviceBox->clear();
-        inputDeviceBox->addItem("Default Input", 1);
         
         bool blackHoleFound = false;
         
@@ -1898,13 +2359,13 @@ private:
                     juce::String deviceName = inputNames[i];
                     juce::Logger::writeToLog("Input device " + juce::String(i) + ": " + deviceName);
                     
-                    // BlackHole을 "OS Sound"로 표시
+                    // BlackHole을 "System Sound / BlackHole"로 표시
                     if (deviceName.contains("BlackHole") || deviceName.contains("blackhole")) {
-                        inputDeviceBox->addItem("OS Sound (BlackHole)", i + 2);
-                        juce::Logger::writeToLog("Added OS Sound (BlackHole) option");
+                        inputDeviceBox->addItem("System Sound / BlackHole", i + 1);
+                        juce::Logger::writeToLog("Added System Sound / BlackHole option");
                         blackHoleFound = true;
                     } else {
-                        inputDeviceBox->addItem(deviceName, i + 2);
+                        inputDeviceBox->addItem(deviceName, i + 1);
                     }
                 }
         } catch (...) {
@@ -1915,14 +2376,13 @@ private:
         // BlackHole이 없으면 비활성화된 옵션 추가
         if (!blackHoleFound) {
             int disabledItemId = 999; // 고유한 ID
-            inputDeviceBox->addItem("OS Sound (BlackHole) - Not Installed", disabledItemId);
+            inputDeviceBox->addItem("System Sound / BlackHole - Not Installed", disabledItemId);
             inputDeviceBox->setItemEnabled(disabledItemId, false);
             juce::Logger::writeToLog("BlackHole not found - added disabled option");
         }
         
         // 출력 장치 목록 업데이트
         outputDeviceBox->clear();
-        outputDeviceBox->addItem("Default Output", 1);
         
         if (deviceType) {
             try {
@@ -1932,7 +2392,11 @@ private:
                 for (int i = 0; i < outputNames.size(); ++i) {
                     juce::String deviceName = outputNames[i];
                     juce::Logger::writeToLog("Output device " + juce::String(i) + ": " + deviceName);
-                    outputDeviceBox->addItem(deviceName, i + 2);
+                    
+                    // BlackHole 2ch는 숨김 처리
+                    if (!deviceName.contains("BlackHole 2ch")) {
+                        outputDeviceBox->addItem(deviceName, i + 1);
+                    }
                 }
                 
                 // 외장 헤드폰이 목록에 없으면 강제로 추가
@@ -1958,28 +2422,55 @@ private:
             }
         }
         
-        // 현재 선택된 장치 설정
-        inputDeviceBox->setSelectedId(1, juce::dontSendNotification);
-        outputDeviceBox->setSelectedId(1, juce::dontSendNotification);
+        // 현재 선택된 장치 설정 (저장된 장치 또는 첫 번째 장치)
+        if (inputDeviceBox->getNumItems() > 0) {
+            bool inputDeviceFound = false;
+            for (int i = 1; i <= inputDeviceBox->getNumItems(); ++i) {
+                if (inputDeviceBox->getItemText(i) == currentInputDevice) {
+                    inputDeviceBox->setSelectedId(i, juce::dontSendNotification);
+                    inputDeviceFound = true;
+                    juce::Logger::writeToLog("Selected saved input device in ComboBox: " + currentInputDevice);
+                    break;
+                }
+            }
+            if (!inputDeviceFound) {
+                inputDeviceBox->setSelectedId(1, juce::dontSendNotification);
+                juce::Logger::writeToLog("Saved input device not found in ComboBox, using first item");
+            }
+        }
+        
+        if (outputDeviceBox->getNumItems() > 0) {
+            bool outputDeviceFound = false;
+            for (int i = 1; i <= outputDeviceBox->getNumItems(); ++i) {
+                if (outputDeviceBox->getItemText(i) == currentOutputDevice) {
+                    outputDeviceBox->setSelectedId(i, juce::dontSendNotification);
+                    outputDeviceFound = true;
+                    juce::Logger::writeToLog("Selected saved output device in ComboBox: " + currentOutputDevice);
+                    break;
+                }
+            }
+            if (!outputDeviceFound) {
+                outputDeviceBox->setSelectedId(1, juce::dontSendNotification);
+                juce::Logger::writeToLog("Saved output device not found in ComboBox, using first item");
+            }
+        }
     }
     
     void changeAudioInputDevice(const juce::String& deviceName) {
         juce::Logger::writeToLog("Changing input device to: " + deviceName);
+        currentInputDevice = deviceName; // 현재 선택된 장치 업데이트
         
-        if (deviceName == "Default Input") {
-            // 기본 입력 장치로 설정
-            deviceManager.setCurrentAudioDeviceType("Core Audio", true);
-            auto currentSetup = deviceManager.getAudioDeviceSetup();
-            currentSetup.inputDeviceName = "";
-            auto result = deviceManager.setAudioDeviceSetup(currentSetup, true);
-            if (result.isNotEmpty()) {
-                juce::Logger::writeToLog("Failed to set default input: " + result);
-            } else {
-                juce::Logger::writeToLog("Successfully set default input device");
-                // 기본 입력으로 변경 시 시스템 출력 복원
-                restoreSystemOutputDevice();
+        // 장치 설정 저장
+        saveDeviceSettings();
+        
+        if (deviceName == "System Sound / BlackHole" || deviceName == "System Sound / BlackHole - Not Installed") {
+            // 비활성화된 BlackHole 옵션 선택 시 처리
+            if (deviceName.contains("Not Installed")) {
+                juce::Logger::writeToLog("BlackHole not installed - showing info");
+                // 여기에 나중에 설치 안내 다이얼로그를 추가할 수 있습니다
+                // 현재는 기본 입력으로 되돌리기
+                return;
             }
-        } else if (deviceName == "OS Sound (BlackHole)") {
             // BlackHole 장치 찾기
             auto* deviceType = deviceManager.getCurrentDeviceTypeObject();
             if (deviceType) {
@@ -2003,7 +2494,7 @@ private:
                             if (result.isNotEmpty()) {
                                 juce::Logger::writeToLog("Failed to change input device to BlackHole: " + result);
                             } else {
-                                juce::Logger::writeToLog("Successfully connected to OS Sound (BlackHole)");
+                                juce::Logger::writeToLog("Successfully connected to System Sound / BlackHole");
                                 
                                 // 시스템 출력 장치를 BlackHole로 설정
                                 setSystemOutputToBlackHole();
@@ -2044,19 +2535,12 @@ private:
     
     void changeAudioOutputDevice(const juce::String& deviceName) {
         juce::Logger::writeToLog("Changing output device to: " + deviceName);
+        currentOutputDevice = deviceName; // 현재 선택된 장치 업데이트
         
-        if (deviceName == "Default Output") {
-            // 기본 출력 장치로 설정
-            deviceManager.setCurrentAudioDeviceType("Core Audio", true);
-            auto currentSetup = deviceManager.getAudioDeviceSetup();
-            currentSetup.outputDeviceName = "";
-            auto result = deviceManager.setAudioDeviceSetup(currentSetup, true);
-            if (result.isNotEmpty()) {
-                juce::Logger::writeToLog("Failed to set default output: " + result);
-            } else {
-                juce::Logger::writeToLog("Successfully set default output device");
-            }
-        } else if (deviceName == "외장 헤드폰 (Manual)") {
+        // 장치 설정 저장
+        saveDeviceSettings();
+        
+        if (deviceName == "외장 헤드폰 (Manual)") {
             // 수동으로 추가된 외장 헤드폰 처리
             juce::Logger::writeToLog("Attempting to set external headphones manually");
             
