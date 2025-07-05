@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<PROPERTIES>
-  <VALUE name="lastInputDevice" val="MacBook Pro &#47560;&#51060;&#53356;"/>
-  <VALUE name="lastOutputDevice" val="SAMSUNG"/>
-</PROPERTIES>

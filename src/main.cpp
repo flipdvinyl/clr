@@ -15,7 +15,8 @@ void drawDropdownList(juce::Graphics& g,
                       int itemHeight,
                       std::vector<juce::Rectangle<int>>& outRects,
                       juce::Justification textJustify,
-                      int textPad = 0) {
+                      int textPad = 0,
+                      float alpha = DEFAULT_ALPHA) {
     outRects.clear();
     int visibleCount = std::min(maxVisible, (int)items.size() - scrollOffset);
     g.setFont(juce::Font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain));
@@ -24,10 +25,10 @@ void drawDropdownList(juce::Graphics& g,
         juce::Rectangle<int> itemRect(dropdownRect.getX(), dropdownRect.getY() + i * itemHeight, dropdownRect.getWidth(), itemHeight);
         outRects.push_back(itemRect);
         bool isSelected = (items[actualIndex] == selectedItem);
-        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
-        g.drawText(items[actualIndex], itemRect.reduced(textPad, 0), textJustify);
+        g.setColour(juce::Colours::black.withAlpha(alpha));
+        g.drawText(items[actualIndex].toLowerCase(), itemRect.reduced(textPad, 0), textJustify);
         if (isSelected) {
-            int textWidth = g.getCurrentFont().getStringWidth(items[actualIndex]);
+            int textWidth = g.getCurrentFont().getStringWidth(items[actualIndex].toLowerCase());
             int underlineY = itemRect.getY() + 15;
             int underlineX;
             if (textJustify == juce::Justification::centredRight) {
@@ -37,7 +38,7 @@ void drawDropdownList(juce::Graphics& g,
             } else {
                 underlineX = itemRect.getX() + textPad;
             }
-            g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+            g.setColour(juce::Colours::black.withAlpha(alpha));
             g.drawLine(underlineX, underlineY, underlineX + textWidth, underlineY, 1.0f);
         }
     }
@@ -274,7 +275,8 @@ public:
 enum class LEDState {
     OFF,           // 꺼짐 (어두운 녹색)
     PLUGIN_ON,     // 플러그인 로딩 성공 (밝은 녹색)
-    PLUGIN_OFF     // 플러그인 로딩 실패 (빨간색)
+    PLUGIN_OFF,    // 플러그인 로딩 실패 (빨간색)
+    BYPASS_ON      // 바이패스 활성화 (어두운 녹색)
 };
 
 class LED {
@@ -298,7 +300,9 @@ public:
             case LEDState::PLUGIN_OFF:
                 ledColour = juce::Colour(0xFFB23636); // 빨간색
                 break;
-
+            case LEDState::BYPASS_ON:
+                ledColour = juce::Colour(0xFF4E564E); // 어두운 녹색(4e564e, 바이패스 시)
+                break;
         }
         
         g.setColour(ledColour);
@@ -329,11 +333,15 @@ public:
 class Panel {
 public:
     Panel(juce::Point<int> center, std::vector<float>& knobValues, std::vector<juce::Rectangle<int>>& knobRects, std::unique_ptr<LED>& statusLED, juce::Colour faceColor, std::vector<bool>& showValues)
-        : center(center), knobValues(knobValues), knobRects(knobRects), statusLED(statusLED), faceColor(faceColor), showValues(showValues) {}
+        : center(center), knobValues(knobValues), knobRects(knobRects), statusLED(statusLED), faceColor(faceColor), showValues(showValues), bypassActive(false) {}
+    
+    void setBypassState(bool bypassOn) {
+        bypassActive = bypassOn;
+    }
     
     void draw(juce::Graphics& g) const {
-        // 기본 알파값 사용
-        float alpha = DEFAULT_ALPHA;
+        // bypass 상태에 따른 알파값 설정 (LED와 노브 인디케이터 제외)
+        float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
         
         // 1. 노브 3개 그리기 (알파값 적용, 단 인디케이터는 제외)
         KnobCluster cluster(center, knobValues, knobRects, faceColor, showValues, alpha);
@@ -396,6 +404,7 @@ public:
     std::vector<bool>& showValues;
     mutable juce::Rectangle<int> stereoMonoRect;
     juce::String stereoText = "stereo";
+    bool bypassActive;
 };
 
 class Preset {
@@ -405,20 +414,20 @@ public:
     void setLabelText(const juce::String& text) { labelText = text; }
     juce::String getLabelText() const { return labelText; }
     
-    void draw(juce::Graphics& g, int buttonY) const {
+    void draw(juce::Graphics& g, int buttonY, float alpha = DEFAULT_ALPHA) const {
         juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         
         // 동적 레이블 텍스트와 언더라인 그리기
         int presetTextWidth = font.getStringWidth(labelText);
         int presetX = 80 - presetTextWidth / 2; // 80px 중앙에서 텍스트 중앙 정렬
         
-        // preset 텍스트 그리기 (기본 알파값 적용)
-        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+        // preset 텍스트 그리기 (bypass 상태에 따른 알파값 적용)
+        g.setColour(juce::Colours::black.withAlpha(alpha));
         g.setFont(font);
         g.drawText(labelText, presetX, buttonY, presetTextWidth, 20, juce::Justification::centredLeft);
         
-        // preset 언더라인 그리기 (100% 투명도)
-        g.setColour(juce::Colours::black);
+        // preset 언더라인 그리기 (bypass 상태에 따른 알파값 적용)
+        g.setColour(juce::Colours::black.withAlpha(alpha));
         g.drawLine(presetX, buttonY + 17, presetX + presetTextWidth, buttonY + 17, 1.0f);
         
         // preset 글자 왼쪽에 LED 배치 (제일 왼쪽 글자에서 왼쪽으로 8px, 아래로 2px 이동)
@@ -426,8 +435,8 @@ public:
         int ledX = presetLeftX - 8; // preset 왼쪽 끝에서 왼쪽으로 8px
         int ledY = buttonY + 10 + 2; // 텍스트 중앙 높이에 맞춤 + 아래로 2px
         
-        // LED 그리기 (6px 원)
-        g.setColour(ledOn ? juce::Colours::green : juce::Colour(0xFF4E564E));
+        // LED 그리기 (6px 원) - 제일 위 상태 LED와 동일한 색상 사용
+        g.setColour(ledOn ? juce::Colour(0xFF36B24A) : juce::Colour(0xFF4E564E));
         g.fillEllipse(ledX - 3, ledY - 3, 6, 6);
         
         // preset 글자 오른쪽에 풀다운 버튼 배치 (제일 오른쪽 글자에서 오른쪽으로 8px, 그리고 왼쪽으로 6px 이동, 그리고 오른쪽으로 2px, 그리고 왼쪽으로 1px 이동, 아래로 5px 이동)
@@ -488,9 +497,16 @@ private:
 
 class Bottom {
 public:
-    Bottom(juce::Colour faceColor) : faceColor(faceColor), preset(faceColor) {}
+    Bottom(juce::Colour faceColor) : faceColor(faceColor), bypassOn(false), preset(faceColor) {}
+    
+    void setBypassState(bool on) {
+        bypassOn = on;
+    }
     
     void draw(juce::Graphics& g) const {
+        // bypass 상태에 따른 알파값 설정 (Panel과 동일하게)
+        float alpha = bypassOn ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
+        
         // 세퍼레이터 기준 아래로 23px 위치에서 위로 10px 이동, 그리고 위로 8px 더 이동, 그리고 위로 2px 더 이동 (세퍼레이터 Y=126, 높이 4px)
         int buttonY = 126 + 4 + 23 - 10 - 8 - 2; // 세퍼레이터 아래 끝 + 23px - 10px - 8px - 2px
         
@@ -499,26 +515,35 @@ public:
         // in 버튼 - 좌측 정렬, 세퍼레이터 왼쪽 끝에서 우측으로 2px 이동, 텍스트는 기본 알파값의 절반, 언더라인은 기본 알파값
         int inX = 8 + 2; // 세퍼레이터 왼쪽 끝 + 2px
         int inTextWidth = font.getStringWidth("in");
-        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA * 0.5f)); // 기본 알파값의 절반
+        g.setColour(juce::Colours::black.withAlpha(alpha * 0.5f)); // bypass 상태에 따른 알파값의 절반
         g.setFont(font);
         g.drawText("in", inX, buttonY, inTextWidth, 20, juce::Justification::centredLeft);
-        // in 언더라인 그리기 (기본 알파값)
-        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+        // in 언더라인 그리기 (bypass 상태에 따른 알파값)
+        g.setColour(juce::Colours::black.withAlpha(alpha));
         g.drawLine(inX, buttonY + 17, inX + inTextWidth, buttonY + 17, 1.0f);
         
         // out 버튼 - 우측 정렬, out 오른쪽 끝을 기준으로 정렬하고 왼쪽으로 2px 이동, 텍스트는 기본 알파값의 절반, 언더라인은 기본 알파값
         int outTextWidth = font.getStringWidth("out");
         int outX = 152 - outTextWidth - 2; // 오른쪽 끝 기준 - 텍스트 너비 - 2px
-        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA * 0.5f)); // 기본 알파값의 절반
+        g.setColour(juce::Colours::black.withAlpha(alpha * 0.5f)); // bypass 상태에 따른 알파값의 절반
         g.drawText("out", outX, buttonY, outTextWidth, 20, juce::Justification::centredLeft);
-        // out 언더라인 그리기 (기본 알파값)
-        g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+        // out 언더라인 그리기 (bypass 상태에 따른 알파값)
+        g.setColour(juce::Colours::black.withAlpha(alpha));
         g.drawLine(outX, buttonY + 17, outX + outTextWidth, buttonY + 17, 1.0f);
         
-        // preset 클래스 사용하여 그리기
-        preset.draw(g, buttonY);
+        // preset 클래스 사용하여 그리기 (bypass 상태 전달)
+        preset.draw(g, buttonY, alpha);
         
-
+        // bypass 버튼 - 중앙 정렬, Face 제일 아래서 위로 4px 이동, 토글 상태에 따른 투명도
+        int bypassY = 270 - 4 - 20; // Face 아래에서 4px 위, 버튼 높이 20px 고려
+        int bypassTextWidth = font.getStringWidth("bypass");
+        int bypassX = 80 - bypassTextWidth / 2; // 80px 중앙에서 텍스트 중앙 정렬
+        
+        // bypass 토글 상태에 따른 투명도 설정 (bypass 버튼은 별도 로직 유지)
+        float bypassAlpha = bypassOn ? 1.0f : 0.2f; // on일 때 100%, off일 때 20%
+        g.setColour(juce::Colours::black.withAlpha(bypassAlpha));
+        g.setFont(font);
+        g.drawText("bypass", bypassX, bypassY, bypassTextWidth, 20, juce::Justification::centred);
     }
     
     bool hitTestInButton(juce::Point<int> pos) const {
@@ -547,12 +572,19 @@ public:
         return preset.hitTestPresetDropdownButton(pos, buttonY);
     }
     
-
+    bool hitTestBypassButton(juce::Point<int> pos) const {
+        int bypassY = 270 - 4 - 20;
+        juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
+        int bypassTextWidth = font.getStringWidth("bypass");
+        int bypassX = 80 - bypassTextWidth / 2;
+        return juce::Rectangle<int>(bypassX, bypassY, bypassTextWidth, 20).contains(pos);
+    }
     
     Preset& getPreset() { return preset; }
     
 private:
     juce::Colour faceColor;
+    bool bypassOn;
     Preset preset;
 };
 
@@ -594,10 +626,11 @@ public:
             if (midiInput) midiInput->start();
         }
         setProcessor(clearPlugin.get());
-        // 플러그인 에디터만 addAndMakeVisible
+        // 플러그인 에디터 생성 및 표시
         if (clearPlugin) {
             pluginEditor.reset(clearPlugin->createEditor());
             if (pluginEditor) {
+                pluginEditor->setOpaque(true); // 완전히 불투명하게
                 addAndMakeVisible(pluginEditor.get());
             }
             juce::Logger::writeToLog("Registering parameter listener...");
@@ -628,28 +661,6 @@ public:
             knob->addListener(this);
             knobs.add(knob.release());
         }
-        
-        // 프리셋 버튼들 생성 (Bypass, Silence 제거)
-        ambientRoomButton = std::make_unique<juce::TextButton>("S* up**");
-        tooLoudButton = std::make_unique<juce::TextButton>("Too Loud");
-        clearVoiceButton = std::make_unique<juce::TextButton>("Clear Voice");
-        dryVoiceButton = std::make_unique<juce::TextButton>("Dry Voice");
-        vocalReferenceButton = std::make_unique<juce::TextButton>("Vocal Reference");
-        stereoMonoButton = std::make_unique<juce::TextButton>("Stereo");
-        
-        clearVoiceButton->addListener(this);
-        ambientRoomButton->addListener(this);
-        vocalReferenceButton->addListener(this);
-        dryVoiceButton->addListener(this);
-        tooLoudButton->addListener(this);
-        stereoMonoButton->addListener(this);
-        
-        addAndMakeVisible(clearVoiceButton.get());
-        addAndMakeVisible(ambientRoomButton.get());
-        addAndMakeVisible(vocalReferenceButton.get());
-        addAndMakeVisible(dryVoiceButton.get());
-        addAndMakeVisible(tooLoudButton.get());
-        addAndMakeVisible(stereoMonoButton.get());
         
         // 오디오 입출력 드롭다운 메뉴 생성
         inputDeviceBox = std::make_unique<juce::ComboBox>();
@@ -694,8 +705,8 @@ public:
     knobValues.resize(3);
     knobShowValues.resize(3, false); // 노브 값 표시 상태
     knobLastValues.resize(3, 1.0f); // 이전 노브 값들 (0~2 범위에서 중간값)
-    buttonRects.resize(5); // 5개 버튼 (Bypass, Silence 제거)
-    buttonLabels.resize(5);
+    buttonRects.resize(5); // 5개 버튼으로 고정
+    // buttonLabels.resize(7); // 필요 없음
     stereoMonoRect = juce::Rectangle<int>();
     inputDeviceRect = juce::Rectangle<int>();
     outputDeviceRect = juce::Rectangle<int>();
@@ -780,19 +791,16 @@ public:
         int w = bounds.getWidth();
         int h = bounds.getHeight();
         int col1 = 160; // 1번 캔버스 가로를 160px로 고정
-        int col3 = w - col1; // 캔버스2 제거로 인해 col3이 col1 바로 다음부터 시작
-        
+        int col3 = w - col1; // 3번 캔버스 (나머지 공간)
         // 플러그인 관련 멤버 접근 전 nullptr/size 체크
         if (knobRects.size() < 3 || knobValues.size() < 3) {
             juce::Logger::writeToLog("paint: knobRects/knobValues size error");
             return;
         }
-        
-        // 1단: 오렌지 배경
+        // 1단: 검정색 배경
         juce::Rectangle<int> leftArea(0, 0, col1, h);
-        g.setColour(juce::Colours::orange);
+        g.setColour(juce::Colours::black);
         g.fillRect(leftArea);
-        
         // Face 그리기 (좌상단 0,0에서 160x280)
         if (face) {
             face->draw(g);
@@ -800,7 +808,6 @@ public:
         
         // 로고 그리기 (Face 바로 위, Panel 아래)
         drawLogo(g);
-        
         // Panel 그리기 (노브 3개 + LED + Stereo 토글) - 1번 캔버스로 이동
         juce::Point<int> panelCenter(80, 83); // 노브2(voice) 중앙을 x=80px, y=83px에 위치
         if (controlPanel) {
@@ -824,6 +831,9 @@ public:
         
         // 입력 드롭다운이 열려있으면 장치 리스트 표시 (in 버튼 바로 아래)
         if (inputDropdownOpen) {
+            // bypass 상태에 따른 알파값 설정 (Panel과 동일하게)
+            float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
+            
             int inButtonY = 126 + 4 + 23 - 10 - 8 - 2;
             int dropdownY = inButtonY + 21;
             int dropdownHeight = std::min(MAX_VISIBLE_ITEMS * ITEM_HEIGHT, (int)inputDeviceList.size() * ITEM_HEIGHT);
@@ -840,17 +850,17 @@ public:
                 // 현재 선택된 장치인지 확인
                 bool isSelected = (inputDeviceList[actualIndex] == currentInputDevice);
                 
-                // 배경색 완전 투명 (그리지 않음)
-                g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
-                g.drawText(inputDeviceList[actualIndex], itemRect, juce::Justification::centredLeft);
+                // bypass 상태에 따른 알파값 적용
+                g.setColour(juce::Colours::black.withAlpha(alpha));
+                g.drawText(inputDeviceList[actualIndex].toLowerCase(), itemRect, juce::Justification::centredLeft);
                 
                 // 현재 선택된 장치에 언더라인 그리기
                 if (isSelected) {
                     // 현재 설정된 폰트 사용 (텍스트 그리기와 동일한 폰트)
-                    int textWidth = g.getCurrentFont().getStringWidth(inputDeviceList[actualIndex]);
+                    int textWidth = g.getCurrentFont().getStringWidth(inputDeviceList[actualIndex].toLowerCase());
                     int underlineY = itemRect.getY() + 15; // 텍스트 아래 3px (1px 아래로 이동)
                     int underlineX = itemRect.getX(); // 오른쪽으로 1px 이동 (-1px -> 0px)
-                    g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+                    g.setColour(juce::Colours::black.withAlpha(alpha));
                     g.drawLine(underlineX, underlineY, underlineX + textWidth, underlineY, 1.0f);
                 }
             }
@@ -858,6 +868,9 @@ public:
         
         // 출력 드롭다운이 열려있으면 장치 리스트 표시 (out 버튼 바로 아래)
         if (outputDropdownOpen) {
+            // bypass 상태에 따른 알파값 설정 (Panel과 동일하게)
+            float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
+            
             // out 버튼 바로 아래 위치 계산 (Bottom 클래스의 out 버튼 위치 참조)
             int outButtonY = 126 + 4 + 23 - 10 - 8 - 2; // Bottom 클래스의 실제 out 버튼 Y 위치
             int dropdownY = outButtonY + 21; // out 버튼 바로 아래 20px + 2px - 1px (위로 1px 이동)
@@ -877,17 +890,17 @@ public:
                 // 현재 선택된 장치인지 확인
                 bool isSelected = (outputDeviceList[actualIndex] == currentOutputDevice);
                 
-                // 배경색 완전 투명 (그리지 않음)
-                g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
-                g.drawText(outputDeviceList[actualIndex], itemRect, juce::Justification::centredRight);
+                // bypass 상태에 따른 알파값 적용
+                g.setColour(juce::Colours::black.withAlpha(alpha));
+                g.drawText(outputDeviceList[actualIndex].toLowerCase(), itemRect, juce::Justification::centredRight);
                 
                 // 현재 선택된 장치에 언더라인 그리기
                 if (isSelected) {
                     // 현재 설정된 폰트 사용 (텍스트 그리기와 동일한 폰트)
-                    int textWidth = g.getCurrentFont().getStringWidth(outputDeviceList[actualIndex]);
+                    int textWidth = g.getCurrentFont().getStringWidth(outputDeviceList[actualIndex].toLowerCase());
                     int underlineY = itemRect.getY() + 15; // 텍스트 아래 3px (1px 아래로 이동)
                     int underlineX = itemRect.getX() + itemRect.getWidth() - textWidth; // 왼쪽으로 1px 이동 (+1px -> 0px)
-                    g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+                    g.setColour(juce::Colours::black.withAlpha(alpha));
                     g.drawLine(underlineX, underlineY, underlineX + textWidth, underlineY, 1.0f);
                 }
             }
@@ -895,33 +908,44 @@ public:
         
         // preset 드롭다운이 열려있으면 프리셋 리스트 표시 (preset 버튼 바로 아래, 중앙 정렬)
         if (presetDropdownOpen) {
+            // bypass 상태에 따른 알파값 설정 (Panel과 동일하게)
+            float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
+            
             int presetButtonY = 126 + 4 + 23 - 10 - 8 - 2;
             int dropdownY = presetButtonY + 21;
             int dropdownHeight = std::min(MAX_VISIBLE_ITEMS * ITEM_HEIGHT, (int)presetList.size() * ITEM_HEIGHT);
             int dropdownWidth = 140;
             int dropdownX = 80 - dropdownWidth / 2; // 중앙 80px 기준으로 정렬
             presetDropdownRect = juce::Rectangle<int>(dropdownX, dropdownY, dropdownWidth, dropdownHeight);
-            drawDropdownList(g, presetList, currentPreset, presetDropdownRect, presetScrollOffset, MAX_VISIBLE_ITEMS, ITEM_HEIGHT, presetRects, juce::Justification::centred, 0);
+            drawDropdownList(g, presetList, currentPreset, presetDropdownRect, presetScrollOffset, MAX_VISIBLE_ITEMS, ITEM_HEIGHT, presetRects, juce::Justification::centred, 0, alpha);
         }
         
-        // 3단: 오른쪽 플러그인 에디터 영역 (캔버스2 제거로 인해 col1 바로 다음부터 시작)
-        juce::Rectangle<int> rightArea(col1, 0, col3, h);
-        g.setColour(juce::Colours::darkslategrey);
+        // 3번 캔버스: 배경만 그리기 (불필요한 텍스트, 회색 배경 등 완전 제거)
+        juce::Rectangle<int> rightArea(col1, 0, getWidth() - col1, getHeight());
+        g.setColour(juce::Colours::black);
         g.fillRect(rightArea);
-        g.setColour(juce::Colours::white);
-        g.setFont(20.0f);
-        g.drawText("Clear Plugin Editor", rightArea.reduced(20), juce::Justification::centred);
+        // 플러그인 에디터는 addAndMakeVisible로 바로 올림 (paint에서 텍스트 등 제거)
         if (pluginEditor) {
-            pluginEditor->setBounds(col1, 0, col3, h);
+            // 플러그인 에디터의 실제 크기 가져오기
+            auto editorBounds = pluginEditor->getBounds();
+            int actualEditorWidth = editorBounds.getWidth();
+            int actualEditorHeight = editorBounds.getHeight();
+            
+            // 고정 좌표 설정 (오른쪽 크롭 방지)
+            pluginEditor->setBounds(160, 0, actualEditorWidth, actualEditorHeight);
         }
+        
+
     }
     void resized() override {
-        auto bounds = getLocalBounds();
-        int w = bounds.getWidth();
-        int col1 = 160; // 1번 캔버스 가로를 160px로 고정
-        int col3 = w - col1; // 캔버스2 제거로 인해 col3이 col1 바로 다음부터 시작
         if (pluginEditor) {
-            pluginEditor->setBounds(col1, 0, col3, bounds.getHeight());
+            // 플러그인 에디터의 실제 크기 가져오기
+            auto editorBounds = pluginEditor->getBounds();
+            int actualEditorWidth = editorBounds.getWidth();
+            int actualEditorHeight = editorBounds.getHeight();
+            
+            // paint()와 동일하게 고정 좌표 사용 (오른쪽 크롭 방지)
+            pluginEditor->setBounds(160, 0, actualEditorWidth, actualEditorHeight);
         }
     }
     
@@ -1517,7 +1541,54 @@ public:
                 repaint();
                 return;
             }
-
+            if (bottom->hitTestBypassButton(pos)) {
+                juce::Logger::writeToLog("Bypass button clicked");
+                // bypass 토글 기능
+                static bool bypassState = false;
+                bypassState = !bypassState;
+                bottom->setBypassState(bypassState);
+                setBypassActive(bypassState);
+                
+                // Panel의 bypass 상태도 업데이트
+                if (controlPanel) {
+                    controlPanel->setBypassState(bypassState);
+                }
+                
+                // JUCE 플러그인 바이패스 기능 구현
+                if (clearPlugin) {
+                    // 먼저 플러그인의 바이패스 파라미터를 찾아서 사용
+                    auto params = clearPlugin->getParameters();
+                    bool bypassParamFound = false;
+                    
+                    for (int i = 0; i < params.size(); ++i) {
+                        if (params[i] && params[i]->getName(100).toLowerCase().contains("bypass")) {
+                            // 바이패스 파라미터를 찾았으면 토글
+                            float currentValue = params[i]->getValue();
+                            float newValue = (currentValue > 0.5f) ? 0.0f : 1.0f;
+                            params[i]->setValueNotifyingHost(newValue);
+                            juce::Logger::writeToLog("Plugin bypass parameter " + juce::String(i) + " set to: " + juce::String(newValue));
+                            bypassParamFound = true;
+                            break;
+                        }
+                    }
+                    
+                    // 플러그인에 바이패스 파라미터가 없는 경우, AudioProcessor의 내장 바이패스 기능 사용
+                    if (!bypassParamFound) {
+                        // AudioProcessor의 바이패스 기능 사용
+                        if (clearPlugin->getBypassParameter()) {
+                            clearPlugin->getBypassParameter()->setValueNotifyingHost(bypassState ? 1.0f : 0.0f);
+                            juce::Logger::writeToLog("AudioProcessor bypass set to: " + juce::String(bypassState ? "ON" : "OFF"));
+                        } else {
+                            // 바이패스 파라미터가 없는 경우, 플러그인을 직접 바이패스
+                            // 이는 플러그인이 JUCE의 표준 바이패스 기능을 지원하지 않는 경우
+                            juce::Logger::writeToLog("Plugin does not support bypass functionality");
+                        }
+                    }
+                }
+                
+                repaint();
+                return;
+            }
             if (bottom->hitTestPresetDropdownButton(pos)) {
                 juce::Logger::writeToLog("Preset dropdown button clicked");
                 // TODO: 프리셋 드롭다운 메뉴 구현
@@ -1525,12 +1596,12 @@ public:
                 return;
             }
         }
-        // 프리셋 버튼 5개 - Bypass, Silence 제거
+        // 프리셋 버튼 5개 - TextButtonLike hit test 사용
         juce::String btnNames[5] = {"S* up**","Too Loud","Clear Voice","Dry Voice","Vocal Reference"};
         for (int i = 0; i < 5; ++i) {
             TextButtonLike tempBtn(btnNames[i], juce::Point<int>(buttonRects[i].getX(), buttonRects[i].getY()), DEFAULT_ALPHA);
             if (tempBtn.hitTest(pos)) {
-                // 기존 preset 기능 매핑 (Bypass, Silence 제거로 인덱스 조정)
+                // 기존 preset 기능 매핑
                 switch (i) {
                     case 0: startAnimation({0.5, 0.0, 0.0}); break; // S* up**
                     case 1: startAnimation({0.5, 0.2, 0.2}); break; // Too Loud
@@ -1551,10 +1622,10 @@ public:
                     int actualIndex = i + inputScrollOffset;
                     if (actualIndex < inputDeviceList.size()) {
                         juce::String selectedDevice = inputDeviceList[actualIndex];
-                        changeAudioInputDevice(selectedDevice);
-                        inputDropdownOpen = false;
-                        repaint();
-                        return;
+                    changeAudioInputDevice(selectedDevice);
+                    inputDropdownOpen = false;
+                    repaint();
+                    return;
                     }
                 }
             }
@@ -1567,10 +1638,10 @@ public:
                     int actualIndex = i + outputScrollOffset;
                     if (actualIndex < outputDeviceList.size()) {
                         juce::String selectedDevice = outputDeviceList[actualIndex];
-                        changeAudioOutputDevice(selectedDevice);
-                        outputDropdownOpen = false;
-                        repaint();
-                        return;
+                    changeAudioOutputDevice(selectedDevice);
+                    outputDropdownOpen = false;
+                    repaint();
+                    return;
                     }
                 }
             }
@@ -1588,7 +1659,7 @@ public:
                         // preset 상태 활성화
                         setPresetActive(true, selectedPreset);
                         
-                        // 프리셋에 따른 애니메이션 실행 (Bypass, Silence 제거)
+                        // 프리셋에 따른 애니메이션 실행
                         if (selectedPreset == "s* up**") {
                             startAnimation({0.5, 0.0, 0.0});
                         } else if (selectedPreset == "too loud") {
@@ -1789,8 +1860,8 @@ public:
                 for (int i = 0; i < outputNames.size(); ++i) {
                     // BlackHole 2ch는 숨김 처리
                     if (!outputNames[i].contains("BlackHole 2ch")) {
-                        outputDeviceList.push_back(outputNames[i].toLowerCase());
-                    }
+                        outputDeviceList.push_back(outputNames[i]); // 원본 이름 저장
+                }
                 }
                 
                 // 외장 헤드폰이 목록에 없으면 강제로 추가
@@ -1805,7 +1876,7 @@ public:
                 }
                 
                 if (!externalHeadphonesFound) {
-                    outputDeviceList.push_back("외장 헤드폰 (manual)");
+                    outputDeviceList.push_back("외장 헤드폰 (Manual)");
                 }
                 
             } catch (...) {
@@ -1831,10 +1902,10 @@ public:
                 for (int i = 0; i < inputNames.size(); ++i) {
                     juce::String deviceName = inputNames[i];
                     if (deviceName.contains("BlackHole") || deviceName.contains("blackhole")) {
-                        inputDeviceList.push_back("system sound / blackhole");
+                        inputDeviceList.push_back("System Sound / BlackHole");
                         blackHoleFound = true;
                     } else {
-                        inputDeviceList.push_back(deviceName.toLowerCase());
+                        inputDeviceList.push_back(deviceName); // 원본 이름 저장
                     }
                 }
             } catch (...) {
@@ -1844,7 +1915,7 @@ public:
         
         // BlackHole이 없으면 비활성화된 옵션 추가
         if (!blackHoleFound) {
-            inputDeviceList.push_back("system sound / blackhole - not installed");
+            inputDeviceList.push_back("System Sound / BlackHole - Not Installed");
         }
         
         // 기본 입력 장치를 첫 번째로 설정
@@ -1954,8 +2025,8 @@ private:
     std::unique_ptr<juce::AudioPluginInstance> clearPlugin;
     std::unique_ptr<juce::MidiInput> midiInput;
     std::unique_ptr<juce::AudioProcessorEditor> pluginEditor;
-    juce::OwnedArray<juce::Slider> knobs;
 
+    juce::OwnedArray<juce::Slider> knobs;
     std::unique_ptr<juce::TextButton> clearVoiceButton;
     std::unique_ptr<juce::TextButton> ambientRoomButton;
     std::unique_ptr<juce::TextButton> vocalReferenceButton;
@@ -2029,7 +2100,7 @@ private:
     // LED 상태 표시
     std::unique_ptr<LED> pluginStatusLED;
     bool pluginLoaded = false;
-
+    bool bypassActive = false;
     
     // Panel (노브 3개 + LED + Stereo 토글을 하나로 묶음)
     std::unique_ptr<Panel> controlPanel;
@@ -2142,8 +2213,11 @@ private:
         if (!pluginLoaded) {
             // 플러그인이 로딩되지 않았으면 빨간색으로 표시
             pluginStatusLED->setState(LEDState::PLUGIN_OFF);
+        } else if (bypassActive) {
+            // 플러그인이 로딩되었고 바이패스가 활성화되었으면 어두운 녹색
+            pluginStatusLED->setState(LEDState::BYPASS_ON);
         } else {
-            // 플러그인이 로딩되었으면 밝은 녹색
+            // 플러그인이 로딩되었고 바이패스가 비활성화되었으면 밝은 녹색
             pluginStatusLED->setState(LEDState::PLUGIN_ON);
         }
         
@@ -2155,7 +2229,10 @@ private:
         updateLEDState();
     }
     
-
+    void setBypassActive(bool active) {
+        bypassActive = active;
+        updateLEDState();
+    }
     
     // Preset 상태 관리 메서드들
     void setPresetActive(bool active, const juce::String& presetName = "") {
@@ -2317,7 +2394,7 @@ private:
                 }
             }
             if (!inputDeviceFound) {
-                inputDeviceBox->setSelectedId(1, juce::dontSendNotification);
+        inputDeviceBox->setSelectedId(1, juce::dontSendNotification);
                 juce::Logger::writeToLog("Saved input device not found in ComboBox, using first item");
             }
         }
@@ -2333,7 +2410,7 @@ private:
                 }
             }
             if (!outputDeviceFound) {
-                outputDeviceBox->setSelectedId(1, juce::dontSendNotification);
+        outputDeviceBox->setSelectedId(1, juce::dontSendNotification);
                 juce::Logger::writeToLog("Saved output device not found in ComboBox, using first item");
             }
         }
@@ -2502,7 +2579,8 @@ public:
         setUsingNativeTitleBar(true);
         setResizable(true, true);
         setContentOwned(new ClearHostApp(), true);
-        centreWithSize(getWidth(), getHeight());
+        // 고정 창 크기: 160 x 270 픽셀
+        centreWithSize(160, 270);
         setVisible(true);
     }
     void closeButtonPressed() override {
