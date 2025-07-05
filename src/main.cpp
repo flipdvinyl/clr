@@ -274,8 +274,7 @@ public:
 enum class LEDState {
     OFF,           // 꺼짐 (어두운 녹색)
     PLUGIN_ON,     // 플러그인 로딩 성공 (밝은 녹색)
-    PLUGIN_OFF,    // 플러그인 로딩 실패 (빨간색)
-    BYPASS_ON      // 바이패스 활성화 (어두운 녹색)
+    PLUGIN_OFF     // 플러그인 로딩 실패 (빨간색)
 };
 
 class LED {
@@ -299,9 +298,7 @@ public:
             case LEDState::PLUGIN_OFF:
                 ledColour = juce::Colour(0xFFB23636); // 빨간색
                 break;
-            case LEDState::BYPASS_ON:
-                ledColour = juce::Colour(0xFF4E564E); // 어두운 녹색(4e564e, 바이패스 시)
-                break;
+
         }
         
         g.setColour(ledColour);
@@ -332,15 +329,11 @@ public:
 class Panel {
 public:
     Panel(juce::Point<int> center, std::vector<float>& knobValues, std::vector<juce::Rectangle<int>>& knobRects, std::unique_ptr<LED>& statusLED, juce::Colour faceColor, std::vector<bool>& showValues)
-        : center(center), knobValues(knobValues), knobRects(knobRects), statusLED(statusLED), faceColor(faceColor), showValues(showValues), bypassActive(false) {}
-    
-    void setBypassState(bool bypassOn) {
-        bypassActive = bypassOn;
-    }
+        : center(center), knobValues(knobValues), knobRects(knobRects), statusLED(statusLED), faceColor(faceColor), showValues(showValues) {}
     
     void draw(juce::Graphics& g) const {
-        // bypass 상태에 따른 알파값 설정 (LED와 노브 인디케이터 제외)
-        float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
+        // 기본 알파값 사용
+        float alpha = DEFAULT_ALPHA;
         
         // 1. 노브 3개 그리기 (알파값 적용, 단 인디케이터는 제외)
         KnobCluster cluster(center, knobValues, knobRects, faceColor, showValues, alpha);
@@ -403,7 +396,6 @@ public:
     std::vector<bool>& showValues;
     mutable juce::Rectangle<int> stereoMonoRect;
     juce::String stereoText = "stereo";
-    bool bypassActive;
 };
 
 class Preset {
@@ -496,11 +488,7 @@ private:
 
 class Bottom {
 public:
-    Bottom(juce::Colour faceColor) : faceColor(faceColor), bypassOn(false), preset(faceColor) {}
-    
-    void setBypassState(bool on) {
-        bypassOn = on;
-    }
+    Bottom(juce::Colour faceColor) : faceColor(faceColor), preset(faceColor) {}
     
     void draw(juce::Graphics& g) const {
         // 세퍼레이터 기준 아래로 23px 위치에서 위로 10px 이동, 그리고 위로 8px 더 이동, 그리고 위로 2px 더 이동 (세퍼레이터 Y=126, 높이 4px)
@@ -530,16 +518,7 @@ public:
         // preset 클래스 사용하여 그리기
         preset.draw(g, buttonY);
         
-        // bypass 버튼 - 중앙 정렬, Face 제일 아래서 위로 4px 이동, 토글 상태에 따른 투명도
-        int bypassY = 270 - 4 - 20; // Face 아래에서 4px 위, 버튼 높이 20px 고려
-        int bypassTextWidth = font.getStringWidth("bypass");
-        int bypassX = 80 - bypassTextWidth / 2; // 80px 중앙에서 텍스트 중앙 정렬
-        
-        // bypass 토글 상태에 따른 투명도 설정
-        float bypassAlpha = bypassOn ? 1.0f : 0.2f; // on일 때 100%, off일 때 20%
-        g.setColour(juce::Colours::black.withAlpha(bypassAlpha));
-        g.setFont(font);
-        g.drawText("bypass", bypassX, bypassY, bypassTextWidth, 20, juce::Justification::centred);
+
     }
     
     bool hitTestInButton(juce::Point<int> pos) const {
@@ -568,19 +547,12 @@ public:
         return preset.hitTestPresetDropdownButton(pos, buttonY);
     }
     
-    bool hitTestBypassButton(juce::Point<int> pos) const {
-        int bypassY = 270 - 4 - 20;
-        juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
-        int bypassTextWidth = font.getStringWidth("bypass");
-        int bypassX = 80 - bypassTextWidth / 2;
-        return juce::Rectangle<int>(bypassX, bypassY, bypassTextWidth, 20).contains(pos);
-    }
+
     
     Preset& getPreset() { return preset; }
     
 private:
     juce::Colour faceColor;
-    bool bypassOn;
     Preset preset;
 };
 
@@ -657,18 +629,14 @@ public:
             knobs.add(knob.release());
         }
         
-        // 프리셋 버튼들 생성
-        bypassButton = std::make_unique<juce::TextButton>("Bypass");
+        // 프리셋 버튼들 생성 (Bypass, Silence 제거)
         ambientRoomButton = std::make_unique<juce::TextButton>("S* up**");
         tooLoudButton = std::make_unique<juce::TextButton>("Too Loud");
-        muteButton = std::make_unique<juce::TextButton>("Silence");
         clearVoiceButton = std::make_unique<juce::TextButton>("Clear Voice");
         dryVoiceButton = std::make_unique<juce::TextButton>("Dry Voice");
         vocalReferenceButton = std::make_unique<juce::TextButton>("Vocal Reference");
         stereoMonoButton = std::make_unique<juce::TextButton>("Stereo");
         
-        bypassButton->addListener(this);
-        muteButton->addListener(this);
         clearVoiceButton->addListener(this);
         ambientRoomButton->addListener(this);
         vocalReferenceButton->addListener(this);
@@ -676,8 +644,6 @@ public:
         tooLoudButton->addListener(this);
         stereoMonoButton->addListener(this);
         
-        addAndMakeVisible(bypassButton.get());
-        addAndMakeVisible(muteButton.get());
         addAndMakeVisible(clearVoiceButton.get());
         addAndMakeVisible(ambientRoomButton.get());
         addAndMakeVisible(vocalReferenceButton.get());
@@ -728,8 +694,8 @@ public:
     knobValues.resize(3);
     knobShowValues.resize(3, false); // 노브 값 표시 상태
     knobLastValues.resize(3, 1.0f); // 이전 노브 값들 (0~2 범위에서 중간값)
-    buttonRects.resize(7); // 7개 버튼으로 확장
-    buttonLabels.resize(7);
+    buttonRects.resize(5); // 5개 버튼 (Bypass, Silence 제거)
+    buttonLabels.resize(5);
     stereoMonoRect = juce::Rectangle<int>();
     inputDeviceRect = juce::Rectangle<int>();
     outputDeviceRect = juce::Rectangle<int>();
@@ -814,17 +780,19 @@ public:
         int w = bounds.getWidth();
         int h = bounds.getHeight();
         int col1 = 160; // 1번 캔버스 가로를 160px로 고정
-        int col2 = w * 0.35;
-        int col3 = w - col1 - col2;
+        int col3 = w - col1; // 캔버스2 제거로 인해 col3이 col1 바로 다음부터 시작
+        
         // 플러그인 관련 멤버 접근 전 nullptr/size 체크
         if (knobRects.size() < 3 || knobValues.size() < 3) {
             juce::Logger::writeToLog("paint: knobRects/knobValues size error");
             return;
         }
+        
         // 1단: 오렌지 배경
         juce::Rectangle<int> leftArea(0, 0, col1, h);
         g.setColour(juce::Colours::orange);
         g.fillRect(leftArea);
+        
         // Face 그리기 (좌상단 0,0에서 160x280)
         if (face) {
             face->draw(g);
@@ -832,10 +800,7 @@ public:
         
         // 로고 그리기 (Face 바로 위, Panel 아래)
         drawLogo(g);
-        // 2단: 가운데 영역 (footer 내용)
-        juce::Rectangle<int> centerArea(col1, 0, col2, h);
-        g.setColour(juce::Colours::darkgrey.darker());
-        g.fillRect(centerArea);
+        
         // Panel 그리기 (노브 3개 + LED + Stereo 토글) - 1번 캔버스로 이동
         juce::Point<int> panelCenter(80, 83); // 노브2(voice) 중앙을 x=80px, y=83px에 위치
         if (controlPanel) {
@@ -939,44 +904,24 @@ public:
             drawDropdownList(g, presetList, currentPreset, presetDropdownRect, presetScrollOffset, MAX_VISIBLE_ITEMS, ITEM_HEIGHT, presetRects, juce::Justification::centred, 0);
         }
         
-        // 프리셋 버튼 7개 (2줄) - TextButtonLike 스타일로 변경
-        int btnW = 100, btnH = 30, btnSpacing = 20;
-        int btnY1 = centerArea.getY() + 180;
-        int btnY2 = btnY1 + btnH + 10;
-        juce::String btnNames[7] = {"Bypass","S* up**","Too Loud","Silence","Clear Voice","Dry Voice","Vocal Reference"};
-        buttonRects.resize(7);
-        for (int i = 0; i < 7; ++i) {
-            int row = i < 4 ? 0 : 1;
-            int col = row == 0 ? i : i-4;
-            int btnX = centerArea.getX() + 30 + col * (btnW + btnSpacing);
-            int btnY = row == 0 ? btnY1 : btnY2;
-            buttonRects[i] = juce::Rectangle<int>(btnX, btnY, btnW, btnH);
-            TextButtonLike presetBtn(btnNames[i], juce::Point<int>(btnX, btnY), DEFAULT_ALPHA);
-            presetBtn.draw(g);
-        }
-
-        
-        // 3단: 오른쪽 플러그인 에디터 영역
-        juce::Rectangle<int> rightArea(col1 + col2, 0, col3, h);
+        // 3단: 오른쪽 플러그인 에디터 영역 (캔버스2 제거로 인해 col1 바로 다음부터 시작)
+        juce::Rectangle<int> rightArea(col1, 0, col3, h);
         g.setColour(juce::Colours::darkslategrey);
         g.fillRect(rightArea);
         g.setColour(juce::Colours::white);
         g.setFont(20.0f);
         g.drawText("Clear Plugin Editor", rightArea.reduced(20), juce::Justification::centred);
         if (pluginEditor) {
-            pluginEditor->setBounds(col1 + col2, 0, col3, h);
+            pluginEditor->setBounds(col1, 0, col3, h);
         }
-        
-
     }
     void resized() override {
         auto bounds = getLocalBounds();
         int w = bounds.getWidth();
-        int col1 = w * 0.25;
-        int col2 = w * 0.35;
-        int col3 = w - col1 - col2;
+        int col1 = 160; // 1번 캔버스 가로를 160px로 고정
+        int col3 = w - col1; // 캔버스2 제거로 인해 col3이 col1 바로 다음부터 시작
         if (pluginEditor) {
-            pluginEditor->setBounds(col1 + col2, 0, col3, bounds.getHeight());
+            pluginEditor->setBounds(col1, 0, col3, bounds.getHeight());
         }
     }
     
@@ -1087,13 +1032,7 @@ public:
     void buttonClicked(juce::Button* button) override {
         if (!clearPlugin) return;
         
-        if (button == bypassButton.get()) {
-            // Bypass: 모든 값 0.5
-            startAnimation({0.5, 0.5, 0.5});
-        } else if (button == muteButton.get()) {
-            // Mute: 모든 값 0
-            startAnimation({0.0, 0.0, 0.0});
-        } else if (button == clearVoiceButton.get()) {
+        if (button == clearVoiceButton.get()) {
             // Clear Voice: Voice 만 1, 나머지 0
             startAnimation({0.0, 0.5, 0.5});
         } else if (button == ambientRoomButton.get()) {
@@ -1578,54 +1517,7 @@ public:
                 repaint();
                 return;
             }
-            if (bottom->hitTestBypassButton(pos)) {
-                juce::Logger::writeToLog("Bypass button clicked");
-                // bypass 토글 기능
-                static bool bypassState = false;
-                bypassState = !bypassState;
-                bottom->setBypassState(bypassState);
-                setBypassActive(bypassState);
-                
-                // Panel의 bypass 상태도 업데이트
-                if (controlPanel) {
-                    controlPanel->setBypassState(bypassState);
-                }
-                
-                // JUCE 플러그인 바이패스 기능 구현
-                if (clearPlugin) {
-                    // 먼저 플러그인의 바이패스 파라미터를 찾아서 사용
-                    auto params = clearPlugin->getParameters();
-                    bool bypassParamFound = false;
-                    
-                    for (int i = 0; i < params.size(); ++i) {
-                        if (params[i] && params[i]->getName(100).toLowerCase().contains("bypass")) {
-                            // 바이패스 파라미터를 찾았으면 토글
-                            float currentValue = params[i]->getValue();
-                            float newValue = (currentValue > 0.5f) ? 0.0f : 1.0f;
-                            params[i]->setValueNotifyingHost(newValue);
-                            juce::Logger::writeToLog("Plugin bypass parameter " + juce::String(i) + " set to: " + juce::String(newValue));
-                            bypassParamFound = true;
-                            break;
-                        }
-                    }
-                    
-                    // 플러그인에 바이패스 파라미터가 없는 경우, AudioProcessor의 내장 바이패스 기능 사용
-                    if (!bypassParamFound) {
-                        // AudioProcessor의 바이패스 기능 사용
-                        if (clearPlugin->getBypassParameter()) {
-                            clearPlugin->getBypassParameter()->setValueNotifyingHost(bypassState ? 1.0f : 0.0f);
-                            juce::Logger::writeToLog("AudioProcessor bypass set to: " + juce::String(bypassState ? "ON" : "OFF"));
-                        } else {
-                            // 바이패스 파라미터가 없는 경우, 플러그인을 직접 바이패스
-                            // 이는 플러그인이 JUCE의 표준 바이패스 기능을 지원하지 않는 경우
-                            juce::Logger::writeToLog("Plugin does not support bypass functionality");
-                        }
-                    }
-                }
-                
-                repaint();
-                return;
-            }
+
             if (bottom->hitTestPresetDropdownButton(pos)) {
                 juce::Logger::writeToLog("Preset dropdown button clicked");
                 // TODO: 프리셋 드롭다운 메뉴 구현
@@ -1633,20 +1525,18 @@ public:
                 return;
             }
         }
-        // 프리셋 버튼 7개 - TextButtonLike hit test 사용
-        juce::String btnNames[7] = {"Bypass","S* up**","Too Loud","Silence","Clear Voice","Dry Voice","Vocal Reference"};
-        for (int i = 0; i < 7; ++i) {
+        // 프리셋 버튼 5개 - Bypass, Silence 제거
+        juce::String btnNames[5] = {"S* up**","Too Loud","Clear Voice","Dry Voice","Vocal Reference"};
+        for (int i = 0; i < 5; ++i) {
             TextButtonLike tempBtn(btnNames[i], juce::Point<int>(buttonRects[i].getX(), buttonRects[i].getY()), DEFAULT_ALPHA);
             if (tempBtn.hitTest(pos)) {
-                // 기존 preset 기능 매핑
+                // 기존 preset 기능 매핑 (Bypass, Silence 제거로 인덱스 조정)
                 switch (i) {
-                    case 0: startAnimation({0.5, 0.5, 0.5}); break; // Bypass
-                    case 1: startAnimation({0.5, 0.0, 0.0}); break; // S* up**
-                    case 2: startAnimation({0.5, 0.2, 0.2}); break; // Too Loud
-                    case 3: startAnimation({0.0, 0.0, 0.0}); break; // Silence
-                    case 4: startAnimation({0.0, 0.5, 0.5}); break; // Clear Voice
-                    case 5: startAnimation({0.0, 0.5, 0.0}); break; // Dry Voice
-                    case 6: startAnimation({0.5, 0.1, 0.1}); break; // Vocal Reference
+                    case 0: startAnimation({0.5, 0.0, 0.0}); break; // S* up**
+                    case 1: startAnimation({0.5, 0.2, 0.2}); break; // Too Loud
+                    case 2: startAnimation({0.0, 0.5, 0.5}); break; // Clear Voice
+                    case 3: startAnimation({0.0, 0.5, 0.0}); break; // Dry Voice
+                    case 4: startAnimation({0.5, 0.1, 0.1}); break; // Vocal Reference
                 }
                 repaint();
                 return;
@@ -1698,7 +1588,7 @@ public:
                         // preset 상태 활성화
                         setPresetActive(true, selectedPreset);
                         
-                        // 프리셋에 따른 애니메이션 실행
+                        // 프리셋에 따른 애니메이션 실행 (Bypass, Silence 제거)
                         if (selectedPreset == "s* up**") {
                             startAnimation({0.5, 0.0, 0.0});
                         } else if (selectedPreset == "too loud") {
@@ -2065,8 +1955,7 @@ private:
     std::unique_ptr<juce::MidiInput> midiInput;
     std::unique_ptr<juce::AudioProcessorEditor> pluginEditor;
     juce::OwnedArray<juce::Slider> knobs;
-    std::unique_ptr<juce::TextButton> bypassButton;
-    std::unique_ptr<juce::TextButton> muteButton;
+
     std::unique_ptr<juce::TextButton> clearVoiceButton;
     std::unique_ptr<juce::TextButton> ambientRoomButton;
     std::unique_ptr<juce::TextButton> vocalReferenceButton;
@@ -2140,7 +2029,7 @@ private:
     // LED 상태 표시
     std::unique_ptr<LED> pluginStatusLED;
     bool pluginLoaded = false;
-    bool bypassActive = false;
+
     
     // Panel (노브 3개 + LED + Stereo 토글을 하나로 묶음)
     std::unique_ptr<Panel> controlPanel;
@@ -2253,11 +2142,8 @@ private:
         if (!pluginLoaded) {
             // 플러그인이 로딩되지 않았으면 빨간색으로 표시
             pluginStatusLED->setState(LEDState::PLUGIN_OFF);
-        } else if (bypassActive) {
-            // 플러그인이 로딩되었고 바이패스가 활성화되었으면 어두운 녹색
-            pluginStatusLED->setState(LEDState::BYPASS_ON);
         } else {
-            // 플러그인이 로딩되었고 바이패스가 비활성화되었으면 밝은 녹색
+            // 플러그인이 로딩되었으면 밝은 녹색
             pluginStatusLED->setState(LEDState::PLUGIN_ON);
         }
         
@@ -2269,10 +2155,7 @@ private:
         updateLEDState();
     }
     
-    void setBypassActive(bool active) {
-        bypassActive = active;
-        updateLEDState();
-    }
+
     
     // Preset 상태 관리 메서드들
     void setPresetActive(bool active, const juce::String& presetName = "") {
