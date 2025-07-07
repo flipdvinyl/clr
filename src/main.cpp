@@ -705,7 +705,7 @@ public:
     knobValues.resize(3);
     knobShowValues.resize(3, false); // 노브 값 표시 상태
     knobLastValues.resize(3, 1.0f); // 이전 노브 값들 (0~2 범위에서 중간값)
-    buttonRects.resize(5); // 5개 버튼으로 고정
+    buttonRects.resize(6); // 6개 버튼으로 확장
     // buttonLabels.resize(7); // 필요 없음
     stereoMonoRect = juce::Rectangle<int>();
     inputDeviceRect = juce::Rectangle<int>();
@@ -1597,17 +1597,18 @@ public:
             }
         }
         // 프리셋 버튼 5개 - TextButtonLike hit test 사용
-        juce::String btnNames[5] = {"S* up**","Too Loud","Clear Voice","Dry Voice","Vocal Reference"};
-        for (int i = 0; i < 5; ++i) {
+        juce::String btnNames[6] = {"S* up**","Too Loud","sommers","Clear Voice","Dry Voice","Vocal Reference"};
+        for (int i = 0; i < 6; ++i) {
             TextButtonLike tempBtn(btnNames[i], juce::Point<int>(buttonRects[i].getX(), buttonRects[i].getY()), DEFAULT_ALPHA);
             if (tempBtn.hitTest(pos)) {
                 // 기존 preset 기능 매핑
                 switch (i) {
                     case 0: startAnimation({0.5, 0.0, 0.0}); break; // S* up**
                     case 1: startAnimation({0.5, 0.2, 0.2}); break; // Too Loud
-                    case 2: startAnimation({0.0, 0.5, 0.5}); break; // Clear Voice
-                    case 3: startAnimation({0.0, 0.5, 0.0}); break; // Dry Voice
-                    case 4: startAnimation({0.5, 0.1, 0.1}); break; // Vocal Reference
+                    case 2: startAnimation({0.0, 1.0, 0.5}); break; // sommers
+                    case 3: startAnimation({0.0, 0.5, 0.5}); break; // Clear Voice
+                    case 4: startAnimation({0.0, 0.5, 0.0}); break; // Dry Voice
+                    case 5: startAnimation({0.5, 0.1, 0.1}); break; // Vocal Reference
                 }
                 repaint();
                 return;
@@ -1647,23 +1648,21 @@ public:
             }
         }
         
-        // preset 드롭다운 아이템 클릭
+        // preset 드롭다운이 열려있으면 프리셋 리스트 표시 (preset 버튼 바로 아래, 중앙 정렬)
         if (presetDropdownOpen) {
             for (int i = 0; i < presetRects.size(); ++i) {
                 if (presetRects[i].contains(pos)) {
                     int actualIndex = i + presetScrollOffset;
                     if (actualIndex < presetList.size()) {
                         juce::String selectedPreset = presetList[actualIndex];
-                        currentPreset = selectedPreset; // 현재 선택된 프리셋 업데이트
-                        
-                        // preset 상태 활성화
+                        currentPreset = selectedPreset;
                         setPresetActive(true, selectedPreset);
-                        
-                        // 프리셋에 따른 애니메이션 실행
                         if (selectedPreset == "s* up**") {
                             startAnimation({0.5, 0.0, 0.0});
                         } else if (selectedPreset == "too loud") {
                             startAnimation({0.5, 0.2, 0.2});
+                        } else if (selectedPreset == "sommers") {
+                            startAnimation({0.0, 1.0, 0.5});
                         } else if (selectedPreset == "clear voice") {
                             startAnimation({0.0, 0.5, 0.5});
                         } else if (selectedPreset == "dry voice") {
@@ -1972,6 +1971,7 @@ public:
         presetList.clear();
         presetList.push_back("s* up**");
         presetList.push_back("too loud");
+        presetList.push_back("sommers");
         presetList.push_back("clear voice");
         presetList.push_back("dry voice");
         presetList.push_back("vocal ref");
@@ -2129,7 +2129,7 @@ private:
     int inputScrollOffset = 0;
     int outputScrollOffset = 0;
     int presetScrollOffset = 0;
-    const int MAX_VISIBLE_ITEMS = 5;
+    const int MAX_VISIBLE_ITEMS = 6;
     const int ITEM_HEIGHT = 16;
     
     // 현재 선택된 장치 추적
