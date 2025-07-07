@@ -16,7 +16,8 @@ void drawDropdownList(juce::Graphics& g,
                       std::vector<juce::Rectangle<int>>& outRects,
                       juce::Justification textJustify,
                       int textPad = 0,
-                      float alpha = DEFAULT_ALPHA) {
+                      float alpha = DEFAULT_ALPHA,
+                      juce::Colour textColor = juce::Colours::black) {
     outRects.clear();
     int visibleCount = std::min(maxVisible, (int)items.size() - scrollOffset);
     g.setFont(juce::Font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain));
@@ -25,7 +26,7 @@ void drawDropdownList(juce::Graphics& g,
         juce::Rectangle<int> itemRect(dropdownRect.getX(), dropdownRect.getY() + i * itemHeight, dropdownRect.getWidth(), itemHeight);
         outRects.push_back(itemRect);
         bool isSelected = (items[actualIndex] == selectedItem);
-        g.setColour(juce::Colours::black.withAlpha(alpha));
+        g.setColour(textColor.withAlpha(alpha));
         g.drawText(items[actualIndex].toLowerCase(), itemRect.reduced(textPad, 0), textJustify);
         if (isSelected) {
             int textWidth = g.getCurrentFont().getStringWidth(items[actualIndex].toLowerCase());
@@ -38,7 +39,7 @@ void drawDropdownList(juce::Graphics& g,
             } else {
                 underlineX = itemRect.getX() + textPad;
             }
-            g.setColour(juce::Colours::black.withAlpha(alpha));
+            g.setColour(textColor.withAlpha(alpha));
             g.drawLine(underlineX, underlineY, underlineX + textWidth, underlineY, 1.0f);
         }
     }
@@ -115,7 +116,10 @@ private:
 
 class Face {
 public:
-    Face() : color(juce::Colour(0xFFFF9625)) {} // FF9625 색상
+    Face() : color(juce::Colour(0xFFFF9625)) {
+        loadSavedColor();
+        updateMode();
+    }
     
     void draw(juce::Graphics& g) const {
         g.setColour(color);
@@ -138,10 +142,61 @@ public:
     
     void setColor(juce::Colour newColor) {
         color = newColor;
+        updateMode();
+        saveColor();
+    }
+    
+    bool isDarkMode() const {
+        return darkMode;
+    }
+    
+    juce::Colour getTextColor() const {
+        return darkMode ? juce::Colours::white : juce::Colours::black;
     }
     
 private:
+    void updateMode() {
+        // 컬러의 실제 명도(luminance) 계산 (0.0~1.0)
+        // RGB to Luminance: 0.299*R + 0.587*G + 0.114*B
+        float r = color.getRed() / 255.0f;
+        float g = color.getGreen() / 255.0f;
+        float b = color.getBlue() / 255.0f;
+        float luminance = 0.299f * r + 0.587f * g + 0.114f * b;
+        darkMode = luminance <= 0.3f; // 30% 이하이면 다크모드
+        
+        // 디버깅용 로그
+        juce::Logger::writeToLog("Face color: " + color.toString() + 
+                                ", Luminance: " + juce::String(luminance, 3) + 
+                                ", Dark mode: " + (darkMode ? "ON" : "OFF"));
+    }
+    
+    void saveColor() {
+        juce::File colorFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                              .getChildFile("ClearHost")
+                              .getChildFile("face_color.conf");
+        colorFile.getParentDirectory().createDirectory();
+        
+        juce::PropertiesFile settings(colorFile, juce::PropertiesFile::Options());
+        settings.setValue("faceColor", color.toString());
+        settings.saveIfNeeded();
+    }
+    
+    void loadSavedColor() {
+        juce::File colorFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                              .getChildFile("ClearHost")
+                              .getChildFile("face_color.conf");
+        
+        if (colorFile.existsAsFile()) {
+            juce::PropertiesFile settings(colorFile, juce::PropertiesFile::Options());
+            juce::String savedColor = settings.getValue("faceColor", "");
+            if (savedColor.isNotEmpty()) {
+                color = juce::Colour::fromString(savedColor);
+            }
+        }
+    }
+    
     juce::Colour color;
+    bool darkMode = false;
 };
 
 class KnobWithLabel {
@@ -149,13 +204,87 @@ public:
     KnobWithLabel(juce::Rectangle<int> area, float value, const juce::String& labelText, juce::Colour knobColour, juce::Colour labelColour, juce::Colour indicatorColour, bool showValue = false)
         : area(area), value(value), labelText(labelText), knobColour(knobColour), labelColour(labelColour), indicatorColour(indicatorColour), showValue(showValue) {}
 
-    void draw(juce::Graphics& g) const {
-        // 노브 원
+    void draw(juce::Graphics& g, juce::Point<int> mousePos = juce::Point<int>(-1, -1)) const {
+        // 노브 중심점
         float cx = area.getCentreX();
         float cy = area.getCentreY();
         float radius = 19.0f;
+        
+        // 마우스 위치가 유효한 경우 그림자 계산
+        if (mousePos.x >= 0 && mousePos.y >= 0) {
+            // 마우스와 노브 중심 간의 벡터 계산
+            float dx = mousePos.x - cx;
+            float dy = mousePos.y - cy;
+            float distance = std::sqrt(dx * dx + dy * dy);
+            
+            float maxDistance = 100.0f; // 최대 거리 100px
+            float normalizedDistance = std::min(distance / maxDistance, 1.0f);
+            
+            // 그림자 offset: 1px ~ 6.6px (기존의 60%)
+            float shadowOffset = 1.0f + normalizedDistance * 6.0f;
+            // 그림자 스케일: 고정값 1.05
+            float shadowScale = 1.05f;
+            // 그림자 알파: 고정값 0.2(20%)
+            float shadowAlpha = 0.2f;
+            
+            if (distance > 0) {
+                float normalizedDx = -dx / distance; // 반대 방향
+                float normalizedDy = -dy / distance; // 반대 방향
+                float shadowOffsetX = normalizedDx * shadowOffset;
+                float shadowOffsetY = normalizedDy * shadowOffset;
+                // 그림자 그리기
+                g.setColour(juce::Colours::black.withAlpha(shadowAlpha));
+                float shadowRadius = radius * shadowScale;
+                g.fillEllipse(cx - shadowRadius + shadowOffsetX, cy - shadowRadius + shadowOffsetY, shadowRadius * 2, shadowRadius * 2);
+            }
+        } else {
+            // 음수 좌표 처리: 노브 중심부터 마우스까지의 거리 계산
+            float dx, dy;
+            
+            // X축 음수 좌표 처리
+            if (mousePos.x < 0) {
+                // 노브 중심부터 마우스까지의 거리 (음수 좌표는 절댓값으로 처리)
+                dx = mousePos.x - cx;
+            } else {
+                dx = mousePos.x - cx;
+            }
+            
+            // Y축 음수 좌표 처리
+            if (mousePos.y < 0) {
+                // 노브 중심부터 마우스까지의 거리 (음수 좌표는 절댓값으로 처리)
+                dy = mousePos.y - cy;
+            } else {
+                dy = mousePos.y - cy;
+            }
+            
+            float distance = std::sqrt(dx * dx + dy * dy);
+            
+            float maxDistance = 100.0f; // 최대 거리 100px
+            float normalizedDistance = std::min(distance / maxDistance, 1.0f);
+            
+            // 그림자 offset: 1px ~ 6.6px (기존의 60%)
+            float shadowOffset = 1.0f + normalizedDistance * 6.0f;
+            // 그림자 스케일: 고정값 1.05
+            float shadowScale = 1.05f;
+            // 그림자 알파: 고정값 0.2(20%)
+            float shadowAlpha = 0.2f;
+            
+            if (distance > 0) {
+                float normalizedDx = -dx / distance; // 반대 방향
+                float normalizedDy = -dy / distance; // 반대 방향
+                float shadowOffsetX = normalizedDx * shadowOffset;
+                float shadowOffsetY = normalizedDy * shadowOffset;
+                // 그림자 그리기
+                g.setColour(juce::Colours::black.withAlpha(shadowAlpha));
+                float shadowRadius = radius * shadowScale;
+                g.fillEllipse(cx - shadowRadius + shadowOffsetX, cy - shadowRadius + shadowOffsetY, shadowRadius * 2, shadowRadius * 2);
+            }
+        }
+        
+        // 노브 원
         g.setColour(knobColour);
         g.fillEllipse(cx - radius, cy - radius, radius * 2, radius * 2);
+        
         // 인디케이터 - Face 색상 사용
         // 270도 범위로 확장: minAngle을 15도 더 반시계, maxAngle을 15도 더 시계방향
         float minAngle = juce::MathConstants<float>::pi * 5.0f/6.0f - juce::MathConstants<float>::pi * 15.0f/180.0f; // 15도 반시계 추가
@@ -204,9 +333,9 @@ public:
 
 class KnobCluster {
 public:
-    KnobCluster(juce::Point<int> center, std::vector<float>& values, std::vector<juce::Rectangle<int>>& rects, juce::Colour faceColor, std::vector<bool>& showValues, float alpha = 1.0f)
-        : center(center), values(values), knobRects(rects), faceColor(faceColor), showValues(showValues), alpha(alpha) {}
-    void draw(juce::Graphics& g) const {
+    KnobCluster(juce::Point<int> center, std::vector<float>& values, std::vector<juce::Rectangle<int>>& rects, juce::Colour faceColor, std::vector<bool>& showValues, float alpha = 1.0f, juce::Colour textColor = juce::Colours::black)
+        : center(center), values(values), knobRects(rects), faceColor(faceColor), showValues(showValues), alpha(alpha), textColor(textColor) {}
+    void draw(juce::Graphics& g, juce::Point<int> mousePos = juce::Point<int>(-1, -1)) const {
         struct KnobPos { int dx, dy; const char* label; };
         KnobPos knobPos[3] = {
             {-46, -37, "amb"},
@@ -221,12 +350,12 @@ public:
                 knobRects[i],
                 values[i],
                 knobPos[i].label,
-                juce::Colours::black.withAlpha(alpha),
-                juce::Colours::black.withAlpha(alpha),
+                textColor.withAlpha(alpha),
+                textColor.withAlpha(alpha),
                 faceColor, // 인디케이터는 알파값 적용 안함
                 showValues[i]
             );
-            knob.draw(g);
+            knob.draw(g, mousePos);
         }
     }
     // 값을 외부에서 바꿀 수 있도록 참조로 보관
@@ -236,14 +365,15 @@ public:
     juce::Colour faceColor;
     std::vector<bool>& showValues;
     float alpha;
+    juce::Colour textColor;
 };
 
 class TextButtonLike {
 public:
-    TextButtonLike(const juce::String& text, juce::Point<int> position, float alpha = DEFAULT_ALPHA)
-        : text(text), position(position), alpha(alpha) {}
+    TextButtonLike(const juce::String& text, juce::Point<int> position, float alpha = DEFAULT_ALPHA, juce::Colour textColor = juce::Colours::black)
+        : text(text), position(position), alpha(alpha), textColor(textColor) {}
     void draw(juce::Graphics& g) const {
-        g.setColour(juce::Colours::black.withAlpha(alpha));
+        g.setColour(textColor.withAlpha(alpha));
         g.setFont(juce::Font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain));
         
         // 텍스트 크기 계산
@@ -257,7 +387,7 @@ public:
         int underlineY = position.y + textH - 1; // 텍스트 아래 0px (8px 아래로 이동)
         int underlineW = textW;
         int underlineX = position.x;
-        g.setColour(juce::Colours::black.withAlpha(alpha));
+        g.setColour(textColor.withAlpha(alpha));
         g.drawLine(underlineX, underlineY, underlineX + underlineW, underlineY, 1.0f);
     }
     bool hitTest(juce::Point<int> pos) const { 
@@ -270,6 +400,7 @@ public:
     juce::String text;
     juce::Point<int> position;
     float alpha;
+    juce::Colour textColor;
 };
 
 enum class LEDState {
@@ -292,10 +423,10 @@ public:
         juce::Colour ledColour;
         switch (state) {
             case LEDState::OFF:
-                ledColour = juce::Colour(0xFF4E564E); // 어두운 녹색(4e564e)
+                ledColour = juce::Colour(0x4D000000); // 검정색, 30% 알파값 (0x4D = 77/255 ≈ 30%)
                 break;
             case LEDState::PLUGIN_ON:
-                ledColour = juce::Colour(0xFF36B24A); // 밝은 녹색
+                ledColour = juce::Colour(0xFF61C554); // 밝은 녹색(#61c554)
                 break;
             case LEDState::PLUGIN_OFF:
                 ledColour = juce::Colour(0xFFB23636); // 빨간색
@@ -332,20 +463,22 @@ public:
 
 class Panel {
 public:
-    Panel(juce::Point<int> center, std::vector<float>& knobValues, std::vector<juce::Rectangle<int>>& knobRects, std::unique_ptr<LED>& statusLED, juce::Colour faceColor, std::vector<bool>& showValues)
-        : center(center), knobValues(knobValues), knobRects(knobRects), statusLED(statusLED), faceColor(faceColor), showValues(showValues), bypassActive(false) {}
+    Panel(juce::Point<int> center, std::vector<float>& knobValues, std::vector<juce::Rectangle<int>>& knobRects, std::unique_ptr<LED>& statusLED, juce::Colour faceColor, std::vector<bool>& showValues, juce::Colour textColor = juce::Colours::black)
+        : center(center), knobValues(knobValues), knobRects(knobRects), statusLED(statusLED), faceColor(faceColor), showValues(showValues), textColor(textColor), bypassActive(false) {}
     
     void setBypassState(bool bypassOn) {
         bypassActive = bypassOn;
     }
     
-    void draw(juce::Graphics& g) const {
+    void setTextColor(juce::Colour color) { textColor = color; }
+
+    void draw(juce::Graphics& g, juce::Point<int> mousePos = juce::Point<int>(-1, -1)) const {
         // bypass 상태에 따른 알파값 설정 (LED와 노브 인디케이터 제외)
         float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
         
         // 1. 노브 3개 그리기 (알파값 적용, 단 인디케이터는 제외)
-        KnobCluster cluster(center, knobValues, knobRects, faceColor, showValues, alpha);
-        cluster.draw(g);
+        KnobCluster cluster(center, knobValues, knobRects, faceColor, showValues, alpha, textColor);
+        cluster.draw(g, mousePos);
         
         // 2. LED 그리기 (2번 노브 중앙 기준, 위로 69px) - LED는 알파값 적용 안함
         if (knobRects.size() >= 2 && statusLED) {
@@ -368,7 +501,7 @@ public:
         int stereoStartX = stereoX - textW/2;
         
         stereoMonoRect = juce::Rectangle<int>(stereoStartX, stereoY, textW, textH);
-        TextButtonLike stereoBtn(stereoText, juce::Point<int>(stereoStartX, stereoY), alpha);
+        TextButtonLike stereoBtn(stereoText, juce::Point<int>(stereoStartX, stereoY), alpha, textColor);
         stereoBtn.draw(g);
     }
     
@@ -396,12 +529,17 @@ public:
         stereoText = text;
     }
     
+    void setFaceColor(juce::Colour color) {
+        faceColor = color;
+    }
+    
     juce::Point<int> center;
     std::vector<float>& knobValues;
     std::vector<juce::Rectangle<int>>& knobRects;
     std::unique_ptr<LED>& statusLED;
     juce::Colour faceColor;
     std::vector<bool>& showValues;
+    juce::Colour textColor;
     mutable juce::Rectangle<int> stereoMonoRect;
     juce::String stereoText = "stereo";
     bool bypassActive;
@@ -409,9 +547,10 @@ public:
 
 class Preset {
 public:
-    Preset(juce::Colour faceColor) : faceColor(faceColor), ledOn(false), labelText("preset") {}
+    Preset(juce::Colour faceColor, juce::Colour textColor = juce::Colours::black) : faceColor(faceColor), textColor(textColor), ledOn(false), labelText("preset") {}
     void setLedOn(bool on) { ledOn = on; }
     void setLabelText(const juce::String& text) { labelText = text; }
+    void setTextColor(juce::Colour color) { textColor = color; }
     juce::String getLabelText() const { return labelText; }
     
     void draw(juce::Graphics& g, int buttonY, float alpha = DEFAULT_ALPHA) const {
@@ -422,12 +561,12 @@ public:
         int presetX = 80 - presetTextWidth / 2; // 80px 중앙에서 텍스트 중앙 정렬
         
         // preset 텍스트 그리기 (bypass 상태에 따른 알파값 적용)
-        g.setColour(juce::Colours::black.withAlpha(alpha));
+        g.setColour(textColor.withAlpha(alpha));
         g.setFont(font);
         g.drawText(labelText, presetX, buttonY, presetTextWidth, 20, juce::Justification::centredLeft);
         
         // preset 언더라인 그리기 (bypass 상태에 따른 알파값 적용)
-        g.setColour(juce::Colours::black.withAlpha(alpha));
+        g.setColour(textColor.withAlpha(alpha));
         g.drawLine(presetX, buttonY + 17, presetX + presetTextWidth, buttonY + 17, 1.0f);
         
         // preset 글자 왼쪽에 LED 배치 (제일 왼쪽 글자에서 왼쪽으로 8px, 아래로 2px 이동)
@@ -436,7 +575,7 @@ public:
         int ledY = buttonY + 10 + 2; // 텍스트 중앙 높이에 맞춤 + 아래로 2px
         
         // LED 그리기 (6px 원) - 제일 위 상태 LED와 동일한 색상 사용
-        g.setColour(ledOn ? juce::Colour(0xFF36B24A) : juce::Colour(0xFF4E564E));
+        g.setColour(ledOn ? juce::Colour(0xFF61C554) : juce::Colour(0x4D000000));
         g.fillEllipse(ledX - 3, ledY - 3, 6, 6);
         
         // preset 글자 오른쪽에 풀다운 버튼 배치 (제일 오른쪽 글자에서 오른쪽으로 8px, 그리고 왼쪽으로 6px 이동, 그리고 오른쪽으로 2px, 그리고 왼쪽으로 1px 이동, 아래로 5px 이동)
@@ -491,13 +630,123 @@ public:
     
 private:
     juce::Colour faceColor;
+    juce::Colour textColor;
     bool ledOn;
     juce::String labelText;
 };
 
+class ColorPicker {
+public:
+    ColorPicker() : isOpen(false), selectedColor(juce::Colour(0xFFFF9625)), paletteY(270) {
+        generatePalette();
+    }
+    void setPosition(juce::Point<int> pos) { position = pos; }
+    void setPaletteY(int) { paletteY = 270 - paletteH; } // 팔레트 아래쪽이 y=270에 맞게
+    void draw(juce::Graphics& g, juce::Colour textColor = juce::Colours::black) const {
+        if (isOpen) drawPalette(g);
+        
+        // 라이트/다크모드에 따라 SVG 파일 선택 (로고와 동일한 조건)
+        bool isDarkMode = (textColor == juce::Colours::white);
+        juce::String svgFileName = isDarkMode ? "picker_w.svg" : "picker_b.svg";
+        juce::File svgFile("/Users/d/JUCEClearHost/Resources/" + svgFileName);
+        
+        // SVG 아이콘 그리기 (8px x 1.3 = 10.4px, 반올림하여 10px)
+        int iconSize = 10;
+        if (svgFile.existsAsFile()) {
+            std::unique_ptr<juce::Drawable> drawable = juce::Drawable::createFromSVGFile(svgFile);
+            if (drawable) {
+                g.setColour(juce::Colours::white); // SVG 자체 색상 사용, 투명도만 적용
+                drawable->drawWithin(g, juce::Rectangle<float>(position.x - iconSize/2, position.y - iconSize/2, iconSize, iconSize), juce::RectanglePlacement::centred, 1.0f);
+            } else {
+                // SVG 로드 실패 시 기본 원형 아이콘
+                float radius = 4.0f;
+                g.setColour(selectedColor);
+                g.fillEllipse(position.x - radius, position.y - radius, radius * 2, radius * 2);
+            }
+        } else {
+            // SVG 파일이 없으면 기본 원형 아이콘
+            float radius = 4.0f;
+            g.setColour(selectedColor);
+            g.fillEllipse(position.x - radius, position.y - radius, radius * 2, radius * 2);
+        }
+    }
+          static constexpr int paletteX = 0;
+      static constexpr int cellSizeY = 16;
+      static constexpr int cellSizeX = 18;
+      static constexpr int cols = 9;
+      static constexpr int rows = 7;
+      static constexpr int paletteW = 159; // 160 - 1 = 159픽셀
+      static constexpr int paletteH = rows * cellSizeY; // 전체 높이 10px 줄임
+    bool hitTest(juce::Point<int> pos) const {
+        if (isOpen && hitTestPalette(pos)) return false; // 팔레트 클릭시 버튼은 hit 안됨
+        float radius = 4.0f;
+        float distance = pos.getDistanceFrom(position);
+        return distance <= radius;
+    }
+    bool hitTestPalette(juce::Point<int> pos) const {
+        if (!isOpen) return false;
+        juce::Rectangle<int> paletteRect(paletteX, paletteY, paletteW, paletteH);
+        return paletteRect.contains(pos);
+    }
+    juce::Colour getColorAtPosition(juce::Point<int> pos) const {
+        if (!isOpen) return selectedColor;
+        juce::Rectangle<int> paletteRect(paletteX, paletteY, paletteW, paletteH);
+        if (paletteRect.contains(pos)) {
+            for (int row = 0; row < rows; ++row) {
+                for (int col = 0; col < cols; ++col) {
+                    int x = paletteX + col * cellSizeX;
+                    int y = paletteY + row * cellSizeY;
+                    juce::Rectangle<int> colorRect(x, y, cellSizeX, cellSizeY);
+                    if (colorRect.contains(pos)) {
+                        return colors[row][col];
+                    }
+                }
+            }
+        }
+        return selectedColor;
+    }
+    void toggle() { isOpen = !isOpen; }
+    void close() { isOpen = false; }
+    juce::Colour getSelectedColor() const { return selectedColor; }
+    void setSelectedColor(juce::Colour color) { selectedColor = color; }
+    bool isPaletteOpen() const { return isOpen; }
+private:
+    void generatePalette() {
+        // 첨부 이미지에서 각 네모의 좌10~우20% 영역의 RGB값을 추정하여 9x7 배열로 지정
+        colors = {
+            { juce::Colour(0xffededed), juce::Colour(0xffe1e1e1), juce::Colour(0xffcccccc), juce::Colour(0xffa6a6a6), juce::Colour(0xff8e8e8e), juce::Colour(0xff6e6e6e), juce::Colour(0xff4a4a4a), juce::Colour(0xff2c2c2c), juce::Colour(0xff191919) },
+            { juce::Colour(0xffffe0ef), juce::Colour(0xfff3b3c9), juce::Colour(0xfff07cae), juce::Colour(0xffe94d8c), juce::Colour(0xffc13a6b), juce::Colour(0xffa02c4e), juce::Colour(0xff7a1d3a), juce::Colour(0xff5a1530), juce::Colour(0xff3d0e22) },
+            { juce::Colour(0xffffe6e6), juce::Colour(0xfff7b3b3), juce::Colour(0xfff07c7c), juce::Colour(0xffe94d4d), juce::Colour(0xffc13a3a), juce::Colour(0xffa02c2c), juce::Colour(0xff7a1d1d), juce::Colour(0xff5a1515), juce::Colour(0xff3d0e0e) },
+            { juce::Colour(0xfffff0e0), juce::Colour(0xfff3d3b3), juce::Colour(0xfff0b87c), juce::Colour(0xffe99d4d), juce::Colour(0xffc17a3a), juce::Colour(0xffa05e2c), juce::Colour(0xff7a471d), juce::Colour(0xff5a3515), juce::Colour(0xff3d220e) },
+            { juce::Colour(0xffe6ffe6), juce::Colour(0xffb3f7b3), juce::Colour(0xff7cf07c), juce::Colour(0xff4de94d), juce::Colour(0xff3ac13a), juce::Colour(0xff2ca02c), juce::Colour(0xff1d7a1d), juce::Colour(0xff155a15), juce::Colour(0xff0e3d0e) },
+            { juce::Colour(0xffe0f7ff), juce::Colour(0xffb3e3f7), juce::Colour(0xff7cccf0), juce::Colour(0xff4db3e9), juce::Colour(0xff3a8ec1), juce::Colour(0xff2c6ea0), juce::Colour(0xff1d4a7a), juce::Colour(0xff15355a), juce::Colour(0xff0e223d) },
+            { juce::Colour(0xffe6e6ff), juce::Colour(0xffb3b3f7), juce::Colour(0xff7c7cf0), juce::Colour(0xff4d4de9), juce::Colour(0xff3a3ac1), juce::Colour(0xff2c2ca0), juce::Colour(0xff1d1d7a), juce::Colour(0xff15155a), juce::Colour(0xff0e0e3d) }
+        };
+    }
+    void drawPalette(juce::Graphics& g) const {
+        // 팔레트 배경 (face 내부 bottom 오버레이, 검정색)
+        g.setColour(juce::Colours::black.withAlpha(0.97f));
+        g.fillRoundedRectangle(paletteX, paletteY, paletteW, paletteH, 8.0f);
+        // 컬러 그리기 (9x7, 네모, 간격 없음)
+        for (int row = 0; row < rows; ++row) {
+            for (int col = 0; col < cols; ++col) {
+                int x = paletteX + col * cellSizeX;
+                int y = paletteY + row * cellSizeY;
+                g.setColour(colors[row][col]);
+                g.fillRect(x, y, cellSizeX, cellSizeY);
+            }
+        }
+    }
+    juce::Point<int> position;
+    bool isOpen;
+    juce::Colour selectedColor;
+    int paletteY;
+    std::vector<std::vector<juce::Colour>> colors;
+};
+
 class Bottom {
 public:
-    Bottom(juce::Colour faceColor) : faceColor(faceColor), bypassOn(false), preset(faceColor) {}
+    Bottom(juce::Colour faceColor, juce::Colour textColor = juce::Colours::black) : faceColor(faceColor), textColor(textColor), bypassOn(false), preset(faceColor, textColor) {}
     
     void setBypassState(bool on) {
         bypassOn = on;
@@ -515,20 +764,20 @@ public:
         // in 버튼 - 좌측 정렬, 세퍼레이터 왼쪽 끝에서 우측으로 2px 이동, 텍스트는 기본 알파값의 절반, 언더라인은 기본 알파값
         int inX = 8 + 2; // 세퍼레이터 왼쪽 끝 + 2px
         int inTextWidth = font.getStringWidth("in");
-        g.setColour(juce::Colours::black.withAlpha(alpha * 0.5f)); // bypass 상태에 따른 알파값의 절반
+        g.setColour(textColor.withAlpha(alpha * 0.5f)); // bypass 상태에 따른 알파값의 절반
         g.setFont(font);
         g.drawText("in", inX, buttonY, inTextWidth, 20, juce::Justification::centredLeft);
         // in 언더라인 그리기 (bypass 상태에 따른 알파값)
-        g.setColour(juce::Colours::black.withAlpha(alpha));
+        g.setColour(textColor.withAlpha(alpha));
         g.drawLine(inX, buttonY + 17, inX + inTextWidth, buttonY + 17, 1.0f);
         
         // out 버튼 - 우측 정렬, out 오른쪽 끝을 기준으로 정렬하고 왼쪽으로 2px 이동, 텍스트는 기본 알파값의 절반, 언더라인은 기본 알파값
         int outTextWidth = font.getStringWidth("out");
         int outX = 152 - outTextWidth - 2; // 오른쪽 끝 기준 - 텍스트 너비 - 2px
-        g.setColour(juce::Colours::black.withAlpha(alpha * 0.5f)); // bypass 상태에 따른 알파값의 절반
+        g.setColour(textColor.withAlpha(alpha * 0.5f)); // bypass 상태에 따른 알파값의 절반
         g.drawText("out", outX, buttonY, outTextWidth, 20, juce::Justification::centredLeft);
         // out 언더라인 그리기 (bypass 상태에 따른 알파값)
-        g.setColour(juce::Colours::black.withAlpha(alpha));
+        g.setColour(textColor.withAlpha(alpha));
         g.drawLine(outX, buttonY + 17, outX + outTextWidth, buttonY + 17, 1.0f);
         
         // preset 클래스 사용하여 그리기 (bypass 상태 전달)
@@ -541,7 +790,7 @@ public:
         
         // bypass 토글 상태에 따른 투명도 설정 (bypass 버튼은 별도 로직 유지)
         float bypassAlpha = bypassOn ? 1.0f : 0.2f; // on일 때 100%, off일 때 20%
-        g.setColour(juce::Colours::black.withAlpha(bypassAlpha));
+        g.setColour(textColor.withAlpha(bypassAlpha));
         g.setFont(font);
         g.drawText("bypass", bypassX, bypassY, bypassTextWidth, 20, juce::Justification::centred);
     }
@@ -582,8 +831,18 @@ public:
     
     Preset& getPreset() { return preset; }
     
+    void setFaceColor(juce::Colour color) {
+        faceColor = color;
+    }
+    
+    void setTextColor(juce::Colour color) {
+        textColor = color;
+        preset.setTextColor(color);
+    }
+    
 private:
     juce::Colour faceColor;
+    juce::Colour textColor;
     bool bypassOn;
     Preset preset;
 };
@@ -613,10 +872,14 @@ public:
         face = std::make_unique<Face>();
         
         // Panel 초기화 (LED 초기화 후에 생성)
-        controlPanel = std::make_unique<Panel>(juce::Point<int>(0, 0), knobValues, knobRects, pluginStatusLED, face->getColor(), knobShowValues);
+        controlPanel = std::make_unique<Panel>(juce::Point<int>(0, 0), knobValues, knobRects, pluginStatusLED, face->getColor(), knobShowValues, face->getTextColor());
         
         // Bottom 초기화
-        bottom = std::make_unique<Bottom>(face->getColor());
+        bottom = std::make_unique<Bottom>(face->getColor(), face->getTextColor());
+        
+        // ColorPicker 초기화 (오른쪽 아래 위치)
+        colorPicker = std::make_unique<ColorPicker>();
+        colorPicker->setPosition(juce::Point<int>(139, 258)); // 위로 1px, 좌로 3px 이동
         
         loadClearVST3();
         setAudioChannels(2, 2);
@@ -807,7 +1070,7 @@ public:
         }
         
         // 로고 그리기 (Face 바로 위, Panel 아래)
-        drawLogo(g);
+        drawLogo(g, face->getTextColor());
         // Panel 그리기 (노브 3개 + LED + Stereo 토글) - 1번 캔버스로 이동
         juce::Point<int> panelCenter(80, 83); // 노브2(voice) 중앙을 x=80px, y=83px에 위치
         if (controlPanel) {
@@ -821,12 +1084,17 @@ public:
             controlPanel->updateStereoText(stereoText);
             
             controlPanel->center = panelCenter;
-            controlPanel->draw(g);
+            controlPanel->draw(g, currentMousePos);
         }
         
         // Bottom 그리기
         if (bottom) {
             bottom->draw(g);
+        }
+        
+        // ColorPicker 그리기
+        if (colorPicker && face) {
+            colorPicker->draw(g, face->getTextColor());
         }
         
         // 입력 드롭다운이 열려있으면 장치 리스트 표시 (in 버튼 바로 아래)
@@ -851,7 +1119,7 @@ public:
                 bool isSelected = (inputDeviceList[actualIndex] == currentInputDevice);
                 
                 // bypass 상태에 따른 알파값 적용
-                g.setColour(juce::Colours::black.withAlpha(alpha));
+                g.setColour(face->getTextColor().withAlpha(alpha));
                 g.drawText(inputDeviceList[actualIndex].toLowerCase(), itemRect, juce::Justification::centredLeft);
                 
                 // 현재 선택된 장치에 언더라인 그리기
@@ -860,7 +1128,7 @@ public:
                     int textWidth = g.getCurrentFont().getStringWidth(inputDeviceList[actualIndex].toLowerCase());
                     int underlineY = itemRect.getY() + 15; // 텍스트 아래 3px (1px 아래로 이동)
                     int underlineX = itemRect.getX(); // 오른쪽으로 1px 이동 (-1px -> 0px)
-                    g.setColour(juce::Colours::black.withAlpha(alpha));
+                    g.setColour(face->getTextColor().withAlpha(alpha));
                     g.drawLine(underlineX, underlineY, underlineX + textWidth, underlineY, 1.0f);
                 }
             }
@@ -891,7 +1159,7 @@ public:
                 bool isSelected = (outputDeviceList[actualIndex] == currentOutputDevice);
                 
                 // bypass 상태에 따른 알파값 적용
-                g.setColour(juce::Colours::black.withAlpha(alpha));
+                g.setColour(face->getTextColor().withAlpha(alpha));
                 g.drawText(outputDeviceList[actualIndex].toLowerCase(), itemRect, juce::Justification::centredRight);
                 
                 // 현재 선택된 장치에 언더라인 그리기
@@ -900,7 +1168,7 @@ public:
                     int textWidth = g.getCurrentFont().getStringWidth(outputDeviceList[actualIndex].toLowerCase());
                     int underlineY = itemRect.getY() + 15; // 텍스트 아래 3px (1px 아래로 이동)
                     int underlineX = itemRect.getX() + itemRect.getWidth() - textWidth; // 왼쪽으로 1px 이동 (+1px -> 0px)
-                    g.setColour(juce::Colours::black.withAlpha(alpha));
+                    g.setColour(face->getTextColor().withAlpha(alpha));
                     g.drawLine(underlineX, underlineY, underlineX + textWidth, underlineY, 1.0f);
                 }
             }
@@ -917,7 +1185,7 @@ public:
             int dropdownWidth = 140;
             int dropdownX = 80 - dropdownWidth / 2; // 중앙 80px 기준으로 정렬
             presetDropdownRect = juce::Rectangle<int>(dropdownX, dropdownY, dropdownWidth, dropdownHeight);
-            drawDropdownList(g, presetList, currentPreset, presetDropdownRect, presetScrollOffset, MAX_VISIBLE_ITEMS, ITEM_HEIGHT, presetRects, juce::Justification::centred, 0, alpha);
+            drawDropdownList(g, presetList, currentPreset, presetDropdownRect, presetScrollOffset, MAX_VISIBLE_ITEMS, ITEM_HEIGHT, presetRects, juce::Justification::centred, 0, alpha, face->getTextColor());
         }
         
         // 3번 캔버스: 배경만 그리기 (불필요한 텍스트, 회색 배경 등 완전 제거)
@@ -935,7 +1203,15 @@ public:
             pluginEditor->setBounds(160, 0, actualEditorWidth, actualEditorHeight);
         }
         
-
+        // ColorPicker 팔레트 위치 동적 지정 (bottom 하단에 맞춤)
+        if (colorPicker) {
+            constexpr int bottomY = 230; // Face 내부 bottom 시작 y (예시)
+            constexpr int bottomHeight = 40; // bottom 높이 (예시)
+            constexpr int paletteH = ColorPicker::paletteH;
+            int paletteY = bottomY + bottomHeight - paletteH;
+            colorPicker->setPaletteY(paletteY);
+            colorPicker->draw(g);
+        }
     }
     void resized() override {
         if (pluginEditor) {
@@ -1533,6 +1809,35 @@ public:
             }
         }
         
+        // ColorPicker 클릭 처리
+        if (colorPicker) {
+            if (colorPicker->hitTest(pos)) {
+                colorPicker->toggle();
+                repaint();
+                return;
+            }
+            if (colorPicker->isPaletteOpen() && colorPicker->hitTestPalette(pos)) {
+                juce::Colour selectedColor = colorPicker->getColorAtPosition(pos);
+                colorPicker->setSelectedColor(selectedColor);
+                if (face) {
+                    face->setColor(selectedColor);
+                    if (controlPanel) controlPanel->setFaceColor(selectedColor);
+                    if (bottom) bottom->setFaceColor(selectedColor);
+                    if (controlPanel) controlPanel->setTextColor(face->getTextColor());
+                    if (bottom) bottom->setTextColor(face->getTextColor());
+                    repaint();
+                }
+                colorPicker->close();
+                return;
+            }
+            // 팔레트가 열려있고, 팔레트 영역이 아닌 곳 클릭 시 닫기
+            if (colorPicker->isPaletteOpen() && !colorPicker->hitTestPalette(pos) && !colorPicker->hitTest(pos)) {
+                colorPicker->close();
+                repaint();
+                return;
+            }
+        }
+        
         // Bottom 버튼들 클릭 처리 (in/out 버튼은 호버로 처리하므로 제거)
         if (bottom) {
             if (bottom->hitTestPresetButton(pos)) {
@@ -1689,6 +1994,10 @@ public:
     }
 
     void mouseDrag(const juce::MouseEvent& event) override {
+        // 마우스 위치 업데이트 (그림자 효과를 위해)
+        auto pos = event.getPosition();
+        currentMousePos = pos;
+        
         if (draggingKnob >= 0) {
             int dy = lastDragY - event.getPosition().y;
             float delta = dy * 0.008f; // 감도를 0.005f에서 0.008f로 증가 (약 60% 더 민감하게)
@@ -1734,7 +2043,22 @@ public:
     }
     
     void mouseMove(const juce::MouseEvent& event) override {
+        // 창 내부의 마우스 위치
         auto pos = event.getPosition();
+        
+        // 창 밖의 마우스 위치도 추적 (그림자 효과를 위해)
+        auto globalPos = juce::Desktop::getInstance().getMainMouseSource().getScreenPosition();
+        auto localPos = getLocalPoint(nullptr, globalPos);
+        
+        // 창 내부에 있을 때는 정확한 위치, 창 밖에 있을 때는 상대적 위치 사용
+        if (getLocalBounds().contains(pos)) {
+            currentMousePos = pos;
+        } else {
+            currentMousePos = juce::Point<int>(localPos.x, localPos.y);
+        }
+        
+        // 그림자 효과를 위해 repaint 호출
+        repaint();
         
         // in 버튼에 호버
         if (bottom && bottom->hitTestInButton(pos)) {
@@ -2110,6 +2434,7 @@ private:
     juce::Rectangle<int> outputDeviceRect;
     int draggingKnob = -1;
     int lastDragY = 0;
+    juce::Point<int> currentMousePos = juce::Point<int>(-1, -1);
     
     // 드롭다운 관련 변수들
     bool inputDropdownOpen = false;
@@ -2154,6 +2479,9 @@ private:
     
     // Bottom 클래스 추가
     std::unique_ptr<Bottom> bottom;
+    
+    // ColorPicker 추가
+    std::unique_ptr<ColorPicker> colorPicker;
     
     void loadClearVST3() {
         // VST3를 우선적으로 시도 (권한 문제 해결 후)
@@ -2305,7 +2633,11 @@ private:
         setPresetActive(false);
     }
     
-    void drawLogo(juce::Graphics& g) {
+    void drawLogo(juce::Graphics& g, juce::Colour textColor = juce::Colours::black) {
+        // 라이트/다크모드에 따라 SVG 파일 선택
+        bool isDarkMode = textColor == juce::Colours::white;
+        juce::String svgFileName = isDarkMode ? "symbol_w.svg" : "symbol_b.svg";
+        juce::File svgFile("/Users/d/JUCEClearHost/Resources/" + svgFileName);
         // bottom 영역의 정중앙 계산
         // 세퍼레이터 아래쪽: Y = 126 + 4 = 130
         // Face 아래쪽: Y = 270
@@ -2333,29 +2665,25 @@ private:
         int boxX = logoSetX;
         int boxY = bottomAreaCenterY - boxSize/2 + 24 - 30; // bottom 영역 중앙 + 24px 아래로 - 30px 위로
         
-        // symbol.svg 로고 그리기 (17px x 17px, black 10% 투명도)
-        juce::File svgFile = juce::File::getCurrentWorkingDirectory().getParentDirectory().getChildFile("Resources/symbol.svg");
+        // 모드에 따른 SVG 로고 그리기 (17px x 17px, 10% 투명도)
         if (svgFile.existsAsFile()) {
             std::unique_ptr<juce::Drawable> drawable = juce::Drawable::createFromSVGFile(svgFile);
             if (drawable) {
-                g.setColour(juce::Colours::black.withAlpha(0.1f));
+                g.setColour(juce::Colours::white.withAlpha(0.1f)); // SVG 자체 색상 사용, 투명도만 적용
                 drawable->drawWithin(g, juce::Rectangle<float>(boxX, boxY, boxSize, boxSize), juce::RectanglePlacement::centred, 1.0f);
-                juce::Logger::writeToLog("SVG logo loaded successfully from: " + svgFile.getFullPathName());
             } else {
-                juce::Logger::writeToLog("Failed to create drawable from SVG: " + svgFile.getFullPathName());
                 // SVG 로드 실패 시 기존 박스 그리기
-                g.setColour(juce::Colours::black.withAlpha(0.1f));
+                g.setColour(textColor.withAlpha(0.1f));
                 g.fillRect(boxX, boxY, boxSize, boxSize);
             }
         } else {
-            juce::Logger::writeToLog("SVG file not found: " + svgFile.getFullPathName());
             // SVG 파일이 없으면 기존 박스 그리기
-            g.setColour(juce::Colours::black.withAlpha(0.1f));
+            g.setColour(textColor.withAlpha(0.1f));
             g.fillRect(boxX, boxY, boxSize, boxSize);
         }
         
-        // 'sup clr' 텍스트 그리기 (28pt, black 10% 투명도, 텍스트만 위로 2px 추가 이동)
-        g.setColour(juce::Colours::black.withAlpha(0.1f));
+        // 'sup clr' 텍스트 그리기 (28pt, textColor 10% 투명도, 텍스트만 위로 2px 추가 이동)
+        g.setColour(textColor.withAlpha(0.1f));
         g.setFont(juce::Font("Euclid Circular B", 28.0f, juce::Font::plain));
         int textX = boxX + boxSize + spacing; // 박스 오른쪽 + 8px 여백
         int textY = boxY + boxSize/2 - textHeight/2 - 2; // 박스 세로 중앙에 텍스트 세로 중앙 정렬 - 2px 위로
