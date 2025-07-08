@@ -1996,7 +1996,7 @@ public:
                 switch (i) {
                     case 0: startAnimation({0.5, 0.0, 0.0}); break; // S* up**
                     case 1: startAnimation({0.5, 0.2, 0.2}); break; // Too Loud
-                    case 2: startAnimation({0.0, 1.0, 0.5}); break; // sommers
+                    case 2: startAnimation({0.5, 1.0, 0.0}); break; // sommers
                     case 3: startAnimation({0.0, 0.5, 0.5}); break; // Clear Voice
                     case 4: startAnimation({0.0, 0.5, 0.0}); break; // Dry Voice
                     case 5: startAnimation({0.5, 0.1, 0.1}); break; // Vocal Reference
@@ -2050,16 +2050,58 @@ public:
                         setPresetActive(true, selectedPreset);
                         if (selectedPreset == "s* up**") {
                             startAnimation({0.5, 0.0, 0.0});
+                            // stereo 설정
+                            if (clearPlugin) {
+                                auto params = clearPlugin->getParameters();
+                                if (params.size() > 13 && params[13]) {
+                                    params[13]->setValueNotifyingHost(1.0f); // stereo
+                                }
+                            }
                         } else if (selectedPreset == "too loud") {
                             startAnimation({0.5, 0.2, 0.2});
+                            // stereo 설정
+                            if (clearPlugin) {
+                                auto params = clearPlugin->getParameters();
+                                if (params.size() > 13 && params[13]) {
+                                    params[13]->setValueNotifyingHost(1.0f); // stereo
+                                }
+                            }
                         } else if (selectedPreset == "sommers") {
-                            startAnimation({0.0, 1.0, 0.5});
+                            startAnimation({0.5, 1.0, 0.0}); // amb 0.5, vox 1.0, v.rev 0
+                            // mono 설정
+                            if (clearPlugin) {
+                                auto params = clearPlugin->getParameters();
+                                if (params.size() > 13 && params[13]) {
+                                    params[13]->setValueNotifyingHost(0.0f); // mono
+                                }
+                            }
                         } else if (selectedPreset == "clear voice") {
                             startAnimation({0.0, 0.5, 0.5});
+                            // stereo 설정
+                            if (clearPlugin) {
+                                auto params = clearPlugin->getParameters();
+                                if (params.size() > 13 && params[13]) {
+                                    params[13]->setValueNotifyingHost(1.0f); // stereo
+                                }
+                            }
                         } else if (selectedPreset == "dry voice") {
                             startAnimation({0.0, 0.5, 0.0});
+                            // stereo 설정
+                            if (clearPlugin) {
+                                auto params = clearPlugin->getParameters();
+                                if (params.size() > 13 && params[13]) {
+                                    params[13]->setValueNotifyingHost(1.0f); // stereo
+                                }
+                            }
                         } else if (selectedPreset == "vocal ref") {
                             startAnimation({0.5, 0.1, 0.1});
+                            // stereo 설정
+                            if (clearPlugin) {
+                                auto params = clearPlugin->getParameters();
+                                if (params.size() > 13 && params[13]) {
+                                    params[13]->setValueNotifyingHost(1.0f); // stereo
+                                }
+                            }
                         }
                         presetDropdownOpen = false;
                         repaint();
