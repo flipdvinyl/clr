@@ -3122,6 +3122,10 @@ public:
         setContentOwned(new ClearHostApp(), true);
         // 고정 창 크기: 160 x 270 픽셀
         centreWithSize(160, 270);
+        
+        // 항상 위에 표시되도록 설정 (다른 앱들과 함께 사용할 때 편리함)
+        setAlwaysOnTop(true);
+        
         setVisible(true);
     }
     void closeButtonPressed() override {
