@@ -432,7 +432,7 @@ public:
                 ledColour = juce::Colour(0xFFB23636); // 빨간색
                 break;
             case LEDState::BYPASS_ON:
-                ledColour = juce::Colour(0xFF4E564E); // 어두운 녹색(4e564e, 바이패스 시)
+                ledColour = juce::Colour(0x4D000000); // 검정색, 30% 알파값 (preset LED OFF와 동일)
                 break;
         }
         
