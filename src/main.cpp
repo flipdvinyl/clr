@@ -746,13 +746,13 @@ private:
 
 class Bottom {
 public:
-    Bottom(juce::Colour faceColor, juce::Colour textColor = juce::Colours::black) : faceColor(faceColor), textColor(textColor), bypassOn(false), preset(faceColor, textColor) {}
+    Bottom(juce::Colour faceColor, juce::Colour textColor = juce::Colours::black) : faceColor(faceColor), textColor(textColor), bypassOn(false), preset(faceColor, textColor), arrowVisible(true) {}
     
     void setBypassState(bool on) {
         bypassOn = on;
     }
     
-    void draw(juce::Graphics& g) const {
+    void draw(juce::Graphics& g, juce::Drawable* arrowDrawableB = nullptr, juce::Drawable* arrowDrawableW = nullptr, const Face* face = nullptr) const {
         // bypass 상태에 따른 알파값 설정 (Panel과 동일하게)
         float alpha = bypassOn ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
         
@@ -761,35 +761,62 @@ public:
         
         juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         
-        // in 버튼 - 좌측 정렬, 세퍼레이터 왼쪽 끝에서 우측으로 2px 이동, 텍스트는 기본 알파값의 절반, 언더라인은 기본 알파값
-        int inX = 8 + 2; // 세퍼레이터 왼쪽 끝 + 2px
-        int inTextWidth = font.getStringWidth("in");
-        g.setColour(textColor.withAlpha(alpha * 0.5f)); // bypass 상태에 따른 알파값의 절반
-        g.setFont(font);
-        g.drawText("in", inX, buttonY, inTextWidth, 20, juce::Justification::centredLeft);
-        // in 언더라인 그리기 (bypass 상태에 따른 알파값)
-        g.setColour(textColor.withAlpha(alpha));
-        g.drawLine(inX, buttonY + 17, inX + inTextWidth, buttonY + 17, 1.0f);
-        
-        // out 버튼 - 우측 정렬, out 오른쪽 끝을 기준으로 정렬하고 왼쪽으로 2px 이동, 텍스트는 기본 알파값의 절반, 언더라인은 기본 알파값
-        int outTextWidth = font.getStringWidth("out");
-        int outX = 152 - outTextWidth - 2; // 오른쪽 끝 기준 - 텍스트 너비 - 2px
-        g.setColour(textColor.withAlpha(alpha * 0.5f)); // bypass 상태에 따른 알파값의 절반
-        g.drawText("out", outX, buttonY, outTextWidth, 20, juce::Justification::centredLeft);
-        // out 언더라인 그리기 (bypass 상태에 따른 알파값)
-        g.setColour(textColor.withAlpha(alpha));
-        g.drawLine(outX, buttonY + 17, outX + outTextWidth, buttonY + 17, 1.0f);
-        
+        if (arrowVisible) {
+            // 화살표 모드: 텍스트와 언더라인 숨기고 화살표 표시
+            // in 화살표 - 좌측 정렬
+            int inX = 8 + 2;
+            int arrowSize = 15; // 20px에서 15px로 줄임 (75%)
+            int arrowY = buttonY + 4; // 5px 아래로 이동에서 4px로 조정 (위로 1px)
+            
+            // 다크모드 여부에 따라 화살표 SVG 선택 (Face의 isDarkMode 기준)
+            bool isDarkMode = face ? face->isDarkMode() : false;
+            juce::Drawable* arrowDrawable = isDarkMode ? arrowDrawableW : arrowDrawableB;
+            
+            if (arrowDrawable) {
+                // SVG 화살표 그리기 (투명도 적용)
+                g.setOpacity(alpha);
+                // in 화살표 그리기
+                arrowDrawable->drawWithin(g, juce::Rectangle<float>(inX, arrowY, arrowSize, arrowSize), juce::RectanglePlacement::centred, alpha);
+                // out 화살표 그리기 (우측 정렬)
+                int outX = 152 - arrowSize - 2;
+                arrowDrawable->drawWithin(g, juce::Rectangle<float>(outX, arrowY, arrowSize, arrowSize), juce::RectanglePlacement::centred, alpha);
+                g.setOpacity(1.0f);
+            } else {
+                // SVG 로드 실패 시 간단한 삼각형으로 대체
+                juce::Colour arrowColor = isDarkMode ? juce::Colours::white : juce::Colours::black;
+                g.setColour(arrowColor.withAlpha(alpha));
+                // in 화살표 (간단한 삼각형)
+                juce::Path arrowPath;
+                arrowPath.addTriangle(inX, arrowY + 5, inX + 8, arrowY + 10, inX, arrowY + 15);
+                g.fillPath(arrowPath);
+                // out 화살표 (간단한 삼각형)
+                int outX = 152 - arrowSize - 2;
+                juce::Path outArrowPath;
+                outArrowPath.addTriangle(outX + 8, arrowY + 5, outX, arrowY + 10, outX + 8, arrowY + 15);
+                g.fillPath(outArrowPath);
+            }
+        } else {
+            // 텍스트 모드: 기존 로직 유지
+            int inX = 8 + 2; // 세퍼레이터 왼쪽 끝 + 2px
+            int inTextWidth = font.getStringWidth("in");
+            g.setColour(textColor.withAlpha(alpha * 0.5f));
+            g.setFont(font);
+            g.drawText("in", inX, buttonY, inTextWidth, 20, juce::Justification::centredLeft);
+            g.setColour(textColor.withAlpha(alpha));
+            g.drawLine(inX, buttonY + 17, inX + inTextWidth, buttonY + 17, 1.0f);
+            int outTextWidth = font.getStringWidth("out");
+            int outX = 152 - outTextWidth - 2;
+            g.setColour(textColor.withAlpha(alpha * 0.5f));
+            g.drawText("out", outX, buttonY, outTextWidth, 20, juce::Justification::centredLeft);
+            g.setColour(textColor.withAlpha(alpha));
+            g.drawLine(outX, buttonY + 17, outX + outTextWidth, buttonY + 17, 1.0f);
+        }
         // preset 클래스 사용하여 그리기 (bypass 상태 전달)
         preset.draw(g, buttonY, alpha);
-        
-        // bypass 버튼 - 중앙 정렬, Face 제일 아래서 위로 4px 이동, 토글 상태에 따른 투명도
-        int bypassY = 270 - 4 - 20; // Face 아래에서 4px 위, 버튼 높이 20px 고려
+        int bypassY = 270 - 4 - 20;
         int bypassTextWidth = font.getStringWidth("bypass");
-        int bypassX = 80 - bypassTextWidth / 2; // 80px 중앙에서 텍스트 중앙 정렬
-        
-        // bypass 토글 상태에 따른 투명도 설정 (bypass 버튼은 별도 로직 유지)
-        float bypassAlpha = bypassOn ? 1.0f : 0.2f; // on일 때 100%, off일 때 20%
+        int bypassX = 80 - bypassTextWidth / 2;
+        float bypassAlpha = bypassOn ? 1.0f : 0.2f;
         g.setColour(textColor.withAlpha(bypassAlpha));
         g.setFont(font);
         g.drawText("bypass", bypassX, bypassY, bypassTextWidth, 20, juce::Justification::centred);
@@ -840,11 +867,20 @@ public:
         preset.setTextColor(color);
     }
     
+    void setArrowVisible(bool visible) {
+        arrowVisible = visible;
+    }
+    
+    bool getArrowVisible() const {
+        return arrowVisible;
+    }
+    
 private:
     juce::Colour faceColor;
     juce::Colour textColor;
     bool bypassOn;
     Preset preset;
+    bool arrowVisible;
 };
 
 class ClearHostApp : public juce::AudioAppComponent, public juce::AudioProcessorPlayer, public juce::AudioProcessorListener, public juce::Slider::Listener, public juce::ComboBox::Listener, public juce::Button::Listener, public juce::Timer {
@@ -944,15 +980,15 @@ public:
         updatePresetList();
         
         // 저장된 장치 설정 로드
-        loadDeviceSettings();
+        // loadDeviceSettings();
         
         // 저장된 설정 적용 또는 기본 장치 설정
-        if (currentInputDevice.isEmpty() && !inputDeviceList.empty()) {
-            currentInputDevice = inputDeviceList[0];
-        }
-        if (currentOutputDevice.isEmpty() && !outputDeviceList.empty()) {
-            currentOutputDevice = outputDeviceList[0];
-        }
+        // if (currentInputDevice.isEmpty() && !inputDeviceList.empty()) {
+        //     currentInputDevice = inputDeviceList[0];
+        // }
+        // if (currentOutputDevice.isEmpty() && !outputDeviceList.empty()) {
+        //     currentOutputDevice = outputDeviceList[0];
+        // }
         
         // 라벨 설정
         inputDeviceLabel.setText("Audio Input:", juce::dontSendNotification);
@@ -997,17 +1033,67 @@ public:
         
         // 초기 preset 표시 업데이트
         updatePresetDisplay();
+        
+        // 화살표 SVG 로드
+        loadArrowSVGs();
+        
+        // 로고 SVG 로드
+        loadLogoSVGs();
     }
     ~ClearHostApp() override {
+        // 타이머 중지 (가장 먼저)
+        stopTimer();
+        
+        // 플러그인 리스너 제거 (플러그인이 아직 유효할 때)
         if (clearPlugin) {
             juce::Logger::writeToLog("Removing parameter listener...");
             clearPlugin->removeListener(this);
-            clearPlugin = nullptr;
         }
+        
+        // 플러그인 에디터 정리
+        if (pluginEditor) {
+            pluginEditor.reset();
+        }
+        
+        // 플러그인 정리
+        if (clearPlugin) {
+            clearPlugin.reset();
+        }
+        
+        // MIDI 입력 정리
+        if (midiInput) {
+            midiInput->stop();
+            midiInput.reset();
+        }
+        
+        // 벡터들 정리
         knobRects.clear();
         knobValues.clear();
-        if (midiInput) midiInput->stop();
-        stopTimer();
+        knobShowValues.clear();
+        knobLastValues.clear();
+        buttonRects.clear();
+        buttonLabels.clear();
+        inputDeviceList.clear();
+        outputDeviceList.clear();
+        presetList.clear();
+        inputDeviceRects.clear();
+        outputDeviceRects.clear();
+        presetRects.clear();
+        
+        // SVG 드로어블들 정리
+        arrowDrawableB.reset();
+        arrowDrawableW.reset();
+        logoDrawableB.reset();
+        logoDrawableW.reset();
+        
+        // 컴포넌트들 정리
+        controlPanel.reset();
+        face.reset();
+        bottom.reset();
+        colorPicker.reset();
+        pluginStatusLED.reset();
+        
+        // 오디오 정리 (마지막에)
         shutdownAudio();
     }
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override {
@@ -1087,9 +1173,9 @@ public:
             controlPanel->draw(g, currentMousePos);
         }
         
-        // Bottom 그리기
+        // Bottom 그리기 (화살표 Drawable 전달)
         if (bottom) {
-            bottom->draw(g);
+            bottom->draw(g, arrowDrawableB.get(), arrowDrawableW.get(), face.get());
         }
         
         // ColorPicker 그리기
@@ -1424,7 +1510,7 @@ public:
         
         if (firstRun) {
             // 첫 실행 시 저장된 장치 설정 적용
-            applySavedDeviceSettings();
+            // applySavedDeviceSettings();
             firstRun = false;
         }
         
@@ -2338,50 +2424,22 @@ public:
     }
     
     void applySavedDeviceSettings() {
-        // 저장된 입력 장치 적용
-        if (currentInputDevice.isNotEmpty()) {
-            bool deviceFound = false;
-            for (const auto& device : inputDeviceList) {
-                if (device == currentInputDevice) {
-                    deviceFound = true;
-                    break;
-                }
-            }
-            
-            if (deviceFound) {
-                changeAudioInputDevice(currentInputDevice);
-                juce::Logger::writeToLog("Applied saved input device: " + currentInputDevice);
-            } else {
-                // 저장된 장치가 없으면 첫 번째 장치 사용
-                if (!inputDeviceList.empty()) {
-                    currentInputDevice = inputDeviceList[0];
-                    changeAudioInputDevice(currentInputDevice);
-                    juce::Logger::writeToLog("Saved input device not found, using first available: " + currentInputDevice);
-                }
-            }
+        // 현재 시스템의 실제 오디오 장치를 사용하도록 수정
+        // 저장된 값 대신 현재 시스템의 실제 장치를 유지
+        
+        // 장치 리스트 업데이트
+        updateInputDeviceList();
+        updateOutputDeviceList();
+        
+        // 현재 시스템 장치를 현재 선택된 장치로 설정
+        if (!inputDeviceList.empty()) {
+            currentInputDevice = inputDeviceList[0]; // 첫 번째 장치 (시스템 기본)
+            juce::Logger::writeToLog("Set current input device to system default: " + currentInputDevice);
         }
         
-        // 저장된 출력 장치 적용
-        if (currentOutputDevice.isNotEmpty()) {
-            bool deviceFound = false;
-            for (const auto& device : outputDeviceList) {
-                if (device == currentOutputDevice) {
-                    deviceFound = true;
-                    break;
-                }
-            }
-            
-            if (deviceFound) {
-                changeAudioOutputDevice(currentOutputDevice);
-                juce::Logger::writeToLog("Applied saved output device: " + currentOutputDevice);
-            } else {
-                // 저장된 장치가 없으면 첫 번째 장치 사용
-                if (!outputDeviceList.empty()) {
-                    currentOutputDevice = outputDeviceList[0];
-                    changeAudioOutputDevice(currentOutputDevice);
-                    juce::Logger::writeToLog("Saved output device not found, using first available: " + currentOutputDevice);
-                }
-            }
+        if (!outputDeviceList.empty()) {
+            currentOutputDevice = outputDeviceList[0]; // 첫 번째 장치 (시스템 기본)
+            juce::Logger::writeToLog("Set current output device to system default: " + currentOutputDevice);
         }
         
         // ComboBox도 업데이트
@@ -2482,6 +2540,54 @@ private:
     
     // ColorPicker 추가
     std::unique_ptr<ColorPicker> colorPicker;
+    
+    // ArrowVisible 변수 및 화살표 SVG 캐시
+    bool arrowVisible = true; // 기본값은 true
+    std::unique_ptr<juce::Drawable> arrowDrawableB;
+    std::unique_ptr<juce::Drawable> arrowDrawableW;
+    
+    // 로고 SVG 캐싱을 위한 멤버 변수들
+    std::unique_ptr<juce::Drawable> logoDrawableB;
+    std::unique_ptr<juce::Drawable> logoDrawableW;
+    bool logoSVGsLoaded = false;
+    
+    void loadArrowSVGs() {
+        // 화살표 SVG 파일들 로드
+        juce::File arrowBFile = juce::File::getCurrentWorkingDirectory().getChildFile("Resources/arrow_b.svg");
+        juce::File arrowWFile = juce::File::getCurrentWorkingDirectory().getChildFile("Resources/arrow_w.svg");
+        
+        if (arrowBFile.existsAsFile()) {
+            arrowDrawableB = juce::Drawable::createFromSVGFile(arrowBFile);
+        }
+        
+        if (arrowWFile.existsAsFile()) {
+            arrowDrawableW = juce::Drawable::createFromSVGFile(arrowWFile);
+        }
+    }
+    
+    void loadLogoSVGs() {
+        if (logoSVGsLoaded) return;
+        
+        // 로고 SVG 파일들 로드
+        juce::File logoBFile = juce::File::getCurrentWorkingDirectory().getChildFile("Resources/symbol_b.svg");
+        juce::File logoWFile = juce::File::getCurrentWorkingDirectory().getChildFile("Resources/symbol_w.svg");
+        
+        if (logoBFile.existsAsFile()) {
+            logoDrawableB = juce::Drawable::createFromSVGFile(logoBFile);
+            if (logoDrawableB) {
+                juce::Logger::writeToLog("SVG logo loaded successfully from: " + logoBFile.getFullPathName());
+            }
+        }
+        
+        if (logoWFile.existsAsFile()) {
+            logoDrawableW = juce::Drawable::createFromSVGFile(logoWFile);
+            if (logoDrawableW) {
+                juce::Logger::writeToLog("SVG logo loaded successfully from: " + logoWFile.getFullPathName());
+            }
+        }
+        
+        logoSVGsLoaded = true;
+    }
     
     void loadClearVST3() {
         // VST3를 우선적으로 시도 (권한 문제 해결 후)
@@ -2613,6 +2719,17 @@ private:
         updatePresetDisplay();
     }
     
+    void setArrowVisible(bool visible) {
+        arrowVisible = visible;
+        if (bottom) {
+            bottom->setArrowVisible(visible);
+        }
+    }
+    
+    bool getArrowVisible() const {
+        return arrowVisible;
+    }
+    
     void updatePresetDisplay() {
         if (bottom) {
             Preset& preset = bottom->getPreset();
@@ -2636,8 +2753,8 @@ private:
     void drawLogo(juce::Graphics& g, juce::Colour textColor = juce::Colours::black) {
         // 라이트/다크모드에 따라 SVG 파일 선택
         bool isDarkMode = textColor == juce::Colours::white;
-        juce::String svgFileName = isDarkMode ? "symbol_w.svg" : "symbol_b.svg";
-        juce::File svgFile("/Users/d/JUCEClearHost/Resources/" + svgFileName);
+        juce::Drawable* logoDrawable = isDarkMode ? logoDrawableW.get() : logoDrawableB.get();
+        
         // bottom 영역의 정중앙 계산
         // 세퍼레이터 아래쪽: Y = 126 + 4 = 130
         // Face 아래쪽: Y = 270
@@ -2666,18 +2783,11 @@ private:
         int boxY = bottomAreaCenterY - boxSize/2 + 24 - 30; // bottom 영역 중앙 + 24px 아래로 - 30px 위로
         
         // 모드에 따른 SVG 로고 그리기 (17px x 17px, 10% 투명도)
-        if (svgFile.existsAsFile()) {
-            std::unique_ptr<juce::Drawable> drawable = juce::Drawable::createFromSVGFile(svgFile);
-            if (drawable) {
-                g.setColour(juce::Colours::white.withAlpha(0.1f)); // SVG 자체 색상 사용, 투명도만 적용
-                drawable->drawWithin(g, juce::Rectangle<float>(boxX, boxY, boxSize, boxSize), juce::RectanglePlacement::centred, 1.0f);
-            } else {
-                // SVG 로드 실패 시 기존 박스 그리기
-                g.setColour(textColor.withAlpha(0.1f));
-                g.fillRect(boxX, boxY, boxSize, boxSize);
-            }
+        if (logoDrawable) {
+            g.setColour(juce::Colours::white.withAlpha(0.1f)); // SVG 자체 색상 사용, 투명도만 적용
+            logoDrawable->drawWithin(g, juce::Rectangle<float>(boxX, boxY, boxSize, boxSize), juce::RectanglePlacement::centred, 1.0f);
         } else {
-            // SVG 파일이 없으면 기존 박스 그리기
+            // SVG 로드 실패 시 기존 박스 그리기
             g.setColour(textColor.withAlpha(0.1f));
             g.fillRect(boxX, boxY, boxSize, boxSize);
         }
