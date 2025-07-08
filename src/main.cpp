@@ -778,7 +778,7 @@ public:
                 // in 화살표 그리기
                 arrowDrawable->drawWithin(g, juce::Rectangle<float>(inX, arrowY, arrowSize, arrowSize), juce::RectanglePlacement::centred, alpha);
                 // out 화살표 그리기 (우측 정렬)
-                int outX = 152 - arrowSize - 2;
+                int outX = 152 - arrowSize - 1; // 오른쪽으로 1px 이동
                 arrowDrawable->drawWithin(g, juce::Rectangle<float>(outX, arrowY, arrowSize, arrowSize), juce::RectanglePlacement::centred, alpha);
                 g.setOpacity(1.0f);
             } else {
@@ -790,7 +790,7 @@ public:
                 arrowPath.addTriangle(inX, arrowY + 5, inX + 8, arrowY + 10, inX, arrowY + 15);
                 g.fillPath(arrowPath);
                 // out 화살표 (간단한 삼각형)
-                int outX = 152 - arrowSize - 2;
+                int outX = 152 - arrowSize - 1; // 오른쪽으로 1px 이동
                 juce::Path outArrowPath;
                 outArrowPath.addTriangle(outX + 8, arrowY + 5, outX, arrowY + 10, outX + 8, arrowY + 15);
                 g.fillPath(outArrowPath);
@@ -915,7 +915,7 @@ public:
         
         // ColorPicker 초기화 (오른쪽 아래 위치)
         colorPicker = std::make_unique<ColorPicker>();
-        colorPicker->setPosition(juce::Point<int>(139, 258)); // 위로 1px, 좌로 3px 이동
+        colorPicker->setPosition(juce::Point<int>(137, 258)); // 왼쪽으로 2px 이동
         
         loadClearVST3();
         setAudioChannels(2, 2);
