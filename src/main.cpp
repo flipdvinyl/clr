@@ -1202,6 +1202,13 @@ public:
         
         loadClearVST3();
         setAudioChannels(2, 2);
+        
+        // 입력 채널 활성화 직후 바로 unassigned로 설정 (마이크 입력 방지)
+        auto currentSetup = deviceManager.getAudioDeviceSetup();
+        currentSetup.inputDeviceName = ""; // 입력 장치 비활성화
+        deviceManager.setAudioDeviceSetup(currentSetup, true);
+        juce::Logger::writeToLog("Input device immediately disabled after audio channels setup");
+        
         auto midiInputs = juce::MidiInput::getAvailableDevices();
         if (!midiInputs.isEmpty()) {
             midiInput = juce::MidiInput::openDevice(midiInputs[0].identifier, this);
@@ -1262,16 +1269,9 @@ public:
         updateOutputDeviceList();
         updatePresetList();
         
-        // 저장된 장치 설정 로드
-        // loadDeviceSettings();
-        
-        // 저장된 설정 적용 또는 기본 장치 설정
-        // if (currentInputDevice.isEmpty() && !inputDeviceList.empty()) {
-        //     currentInputDevice = inputDeviceList[0];
-        // }
-        // if (currentOutputDevice.isEmpty() && !outputDeviceList.empty()) {
-        //     currentOutputDevice = outputDeviceList[0];
-        // }
+        // 저장된 장치 설정 로드 및 적용
+        loadDeviceSettings();
+        applySavedDeviceSettings();
         
         // 라벨 설정
         inputDeviceLabel.setText("Audio Input:", juce::dontSendNotification);
@@ -2758,6 +2758,9 @@ public:
     void updateInputDeviceList() {
         inputDeviceList.clear();
         
+        // unassigned를 최상단에 추가 (묵음 상태)
+        inputDeviceList.push_back("unassigned");
+        
         bool blackHoleFound = false;
         
         auto* deviceType = deviceManager.getCurrentDeviceTypeObject();
@@ -2783,10 +2786,8 @@ public:
             inputDeviceList.push_back("System Sound / BlackHole - Not Installed");
         }
         
-        // 기본 입력 장치를 첫 번째로 설정
-        if (!inputDeviceList.empty()) {
-            currentInputDevice = inputDeviceList[0];
-        }
+        // 앱 실행 시 강제로 unassigned로 설정
+        currentInputDevice = "unassigned";
     }
     
     void updatePresetList() {
@@ -2810,23 +2811,21 @@ public:
         }
         
         juce::PropertiesFile settings(deviceSettingsFile, juce::PropertiesFile::Options());
-        settings.setValue("lastInputDevice", currentInputDevice);
+        // 입력 장치 설정은 저장하지 않음 (항상 unassigned로 강제 설정)
         settings.setValue("lastOutputDevice", currentOutputDevice);
         settings.save();
         
-        juce::Logger::writeToLog("Device settings saved - Input: " + currentInputDevice + ", Output: " + currentOutputDevice);
+        juce::Logger::writeToLog("Device settings saved - Output: " + currentOutputDevice + " (Input always unassigned)");
     }
     
     void loadDeviceSettings() {
         if (deviceSettingsFile.existsAsFile()) {
             juce::PropertiesFile settings(deviceSettingsFile, juce::PropertiesFile::Options());
-            juce::String savedInputDevice = settings.getValue("lastInputDevice", "");
             juce::String savedOutputDevice = settings.getValue("lastOutputDevice", "");
             
-            if (savedInputDevice.isNotEmpty()) {
-                currentInputDevice = savedInputDevice;
-                juce::Logger::writeToLog("Loaded saved input device: " + currentInputDevice);
-            }
+            // 입력 장치는 강제로 unassigned로 설정 (묵음 상태)
+            currentInputDevice = "unassigned";
+            juce::Logger::writeToLog("Input device forced to unassigned (silent)");
             
             if (savedOutputDevice.isNotEmpty()) {
                 currentOutputDevice = savedOutputDevice;
@@ -2836,22 +2835,38 @@ public:
     }
     
     void applySavedDeviceSettings() {
-        // 현재 시스템의 실제 오디오 장치를 사용하도록 수정
-        // 저장된 값 대신 현재 시스템의 실제 장치를 유지
-        
         // 장치 리스트 업데이트
         updateInputDeviceList();
         updateOutputDeviceList();
         
-        // 현재 시스템 장치를 현재 선택된 장치로 설정
-        if (!inputDeviceList.empty()) {
-            currentInputDevice = inputDeviceList[0]; // 첫 번째 장치 (시스템 기본)
-            juce::Logger::writeToLog("Set current input device to system default: " + currentInputDevice);
-        }
+        // 입력 장치는 강제로 unassigned로 설정 (묵음 상태)
+        currentInputDevice = "unassigned";
+        juce::Logger::writeToLog("Set current input device to unassigned (silent)");
         
-        if (!outputDeviceList.empty()) {
-            currentOutputDevice = outputDeviceList[0]; // 첫 번째 장치 (시스템 기본)
-            juce::Logger::writeToLog("Set current output device to system default: " + currentOutputDevice);
+        // 실제 오디오 장치도 입력 비활성화
+        auto currentSetup = deviceManager.getAudioDeviceSetup();
+        currentSetup.inputDeviceName = ""; // 빈 문자열로 설정하여 입력 비활성화
+        deviceManager.setAudioDeviceSetup(currentSetup, true);
+        juce::Logger::writeToLog("Audio input device disabled");
+        
+        // 출력 장치는 현재 시스템에 설정된 장치를 그대로 사용
+        // 시스템 출력은 건드리지 않고, 앱 내부에서만 현재 시스템 출력 장치를 사용
+        auto* deviceType = deviceManager.getCurrentDeviceTypeObject();
+        if (deviceType) {
+            try {
+                auto outputNames = deviceType->getDeviceNames(false);
+                if (!outputNames.isEmpty()) {
+                    // 현재 시스템에 설정된 출력 장치를 찾아서 앱 내부 설정으로 사용
+                    currentOutputDevice = outputNames[0]; // 시스템 기본 출력 장치
+                    juce::Logger::writeToLog("Using current system output device: " + currentOutputDevice);
+                    
+                    // 앱 내부 출력 장치 설정 (시스템 출력은 변경하지 않음)
+                    currentSetup.outputDeviceName = currentOutputDevice;
+                    deviceManager.setAudioDeviceSetup(currentSetup, true);
+                }
+            } catch (...) {
+                juce::Logger::writeToLog("Error getting current system output device");
+            }
         }
         
         // ComboBox도 업데이트
@@ -3325,8 +3340,13 @@ private:
                 }
             }
             if (!inputDeviceFound) {
-        inputDeviceBox->setSelectedId(1, juce::dontSendNotification);
-                juce::Logger::writeToLog("Saved input device not found in ComboBox, using first item");
+                // "unassigned"가 ComboBox에 없으면 선택하지 않음 (첫 번째 항목 자동 선택 방지)
+                if (currentInputDevice == "unassigned") {
+                    juce::Logger::writeToLog("Input device is unassigned - not selecting any ComboBox item");
+                } else {
+                    inputDeviceBox->setSelectedId(1, juce::dontSendNotification);
+                    juce::Logger::writeToLog("Saved input device not found in ComboBox, using first item");
+                }
             }
         }
         
@@ -3354,7 +3374,28 @@ private:
         // 장치 설정 저장
         saveDeviceSettings();
         
-        if (deviceName == "System Sound / BlackHole" || deviceName == "System Sound / BlackHole - Not Installed") {
+        if (deviceName == "unassigned") {
+            // unassigned 선택 시 입력 장치를 비활성화 (묵음 상태)
+            juce::Logger::writeToLog("Setting input device to unassigned (silent)");
+            
+            // 오디오 재시작을 위해 일시 중지
+            deviceManager.closeAudioDevice();
+            
+            // 입력 장치를 비활성화
+            auto currentSetup = deviceManager.getAudioDeviceSetup();
+            currentSetup.inputDeviceName = ""; // 빈 문자열로 설정하여 입력 비활성화
+            
+            auto result = deviceManager.setAudioDeviceSetup(currentSetup, true);
+            if (result.isNotEmpty()) {
+                juce::Logger::writeToLog("Failed to set input device to unassigned: " + result);
+            } else {
+                juce::Logger::writeToLog("Successfully set input device to unassigned (silent)");
+                
+                // 오디오 재시작
+                deviceManager.restartLastAudioDevice();
+            }
+            return;
+        } else if (deviceName == "System Sound / BlackHole" || deviceName == "System Sound / BlackHole - Not Installed") {
             // 비활성화된 BlackHole 옵션 선택 시 처리
             if (deviceName.contains("Not Installed")) {
                 juce::Logger::writeToLog("BlackHole not installed - showing info");
