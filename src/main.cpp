@@ -506,16 +506,18 @@ public:
         }
     }
     
-    void draw(juce::Graphics& g, juce::Point<int> center) const {
+    void draw(juce::Graphics& g, juce::Point<int> center, bool bypassActive = false) const {
         if (!isOn) {
             // OFF 상태: 빨간색 (RGB 255,0,0)
-            g.setColour(juce::Colour(255, 0, 0));
+            g.setColour(juce::Colour(255, 0, 0).withAlpha(bypassActive ? 0.3f : 1.0f));
         } else {
             // ON 상태: 깜빡임 효과 - preset LED OFF 색과 동일한 컬러 사용
             if (blinkState) {
-                g.setColour(juce::Colour(255, 0, 0)); // 100% 빨간색
+                g.setColour(juce::Colour(255, 0, 0).withAlpha(bypassActive ? 0.3f : 1.0f)); // bypass 상태에 따른 알파값 적용
             } else {
-                g.setColour(juce::Colour(0x4D000000)); // 검정색, 30% 알파값 (preset LED OFF와 동일)
+                // 검정색, 30% 알파값 (preset LED OFF와 동일) - bypass 상태일 때는 추가 알파값 적용
+                float alpha = bypassActive ? 0.3f * 0.3f : 0.3f; // bypass on일 때 30% * 30% = 9%, off일 때 30%
+                g.setColour(juce::Colour(0, 0, 0).withAlpha(alpha));
             }
         }
         
@@ -578,7 +580,7 @@ public:
         int separatorX = 80 - separatorWidth / 2; // 중앙정렬
         int separatorY = 121 - 4 / 2; // 중앙정렬 (5px 아래로 이동)
         juce::Point<int> recCenter(separatorX + separatorWidth - 13, separatorY - 13); // separator 우측 상단에서 위로 13px, 좌로 13px
-        recButton.draw(g, recCenter);
+        recButton.draw(g, recCenter, bypassActive);
         
         // 4. Stereo/Mono 토글 버튼 그리기 (알파값 적용)
         // stereoText는 외부에서 updateStereoText()로 업데이트됨
