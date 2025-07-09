@@ -376,6 +376,22 @@ CMakeFiles/ClearHost.dir/src/main.cpp.o: /Users/d/JUCEClearHost/src/main.cpp \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__exception/nested_exception.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__exception/operations.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__exception/terminate.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/copy_options.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/directory_entry.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/directory_iterator.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/directory_options.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/file_status.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/file_time_type.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/file_type.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/filesystem_error.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/operations.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/path.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/path_iterator.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/perm_options.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/perms.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/recursive_directory_iterator.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/space_info.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/u8path.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/buffer.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/concepts.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/enable_insertable.h \
@@ -763,6 +779,8 @@ CMakeFiles/ClearHost.dir/src/main.cpp.o: /Users/d/JUCEClearHost/src/main.cpp \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/errno.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/exception \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/execution \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/filesystem \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/fstream \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/functional \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/future \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/initializer_list \
@@ -30488,8 +30506,6 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-bit-set.hh:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-bit-set-invertible.hh:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-bimap.hh:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-aat-map.hh:
@@ -31082,11 +31098,13 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_SystemStats_mac.mm:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/windows/juce_ScopedMessageBox.cpp:
+/usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_PlatformTimerListener.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_trivially_move_assignable.h:
+/usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_Network_mac.mm:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_PlatformTimer_generic.cpp:
+/usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_NamedPipe_posix.cpp:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_Files_mac.mm:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/misc/juce_Uuid.cpp:
 
@@ -31094,15 +31112,11 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/misc/juce_Result.cpp:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__ranges/access.h:
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/layout/juce_ComponentMovementWatcher.cpp:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_core/misc/juce_ConsoleApplication.cpp:
+/usr/local/include/JUCE-8.0.8/modules/juce_core/memory/juce_MemoryBlock.cpp:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__exception/exception.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreGraphics.framework/Headers/CGPDFContentStream.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/memory/juce_AllocationHooks.cpp:
+/usr/local/include/JUCE-8.0.8/modules/juce_core/maths/juce_Random.cpp:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/logging/juce_FileLogger.cpp:
 
@@ -31200,10 +31214,6 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/DiscRecording.framework/Headers/DRCoreBurn.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/sources/juce_BufferingAudioSource.cpp:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/DiscRecording.framework/Headers/DRContentTrack.h:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_data_structures/undomanager/juce_UndoManager.cpp:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/DiscRecording.framework/Headers/DRContentFile.h:
@@ -31236,6 +31246,8 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/utilities/juce_ParameterAttachments.cpp:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/filesystem_error.h:
+
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/public.sdk/source/vst/vstparameters.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/utilities/juce_AudioParameterChoice.cpp:
@@ -31257,8 +31269,6 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/juce_LV2PluginFormat.cpp:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/juce_AU_Shared.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_Files_mac.mm:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/public.sdk/source/vst/vstcomponentbase.cpp:
 
@@ -31442,10 +31452,6 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/assert.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/sample.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreAudioKit.framework/Headers/AUCustomViewPersistentData.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AudioUnit.framework/Headers/AudioUnitProperties.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AudioUnit.framework/Headers/AudioComponent.h:
@@ -31481,8 +31487,6 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/OT/Layout/GSUB/ChainContextSubst.hh:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/oggvorbis/libvorbis-1.3.7/lib/vorbisfile.c:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_PlatformTimerListener.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/sources/juce_MemoryAudioSource.h:
 
@@ -31637,8 +31641,6 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 /usr/local/include/JUCE-8.0.8/modules/juce_core/threads/juce_TimeSliceThread.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/flac/libFLAC/include/private/bitreader.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/flac/libFLAC/include/private/bitmath.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/flac/ordinals.h:
 
@@ -31980,10 +31982,6 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Cocoa.framework/Headers/Cocoa.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_events/interprocess/juce_NetworkServiceDiscovery.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/misc/juce_ScopeGuard.cpp:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/pluginterfaces/vst/ivstautomationstate.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/layout/juce_FlexBox.cpp:
@@ -32162,9 +32160,9 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSPrintOperation.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/midi/ump/juce_UMPDeviceInfo.h:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_AndroidDocument_android.cpp:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/midi/ump/juce_UMPDeviceInfo.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSPrintInfo.h:
 
@@ -32500,6 +32498,10 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSTitlebarAccessoryViewController.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/DiscRecording.framework/Headers/DRContentTrack.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/sources/juce_BufferingAudioSource.cpp:
+
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/mpe/juce_MPEZoneLayout.cpp:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/mpe/juce_MPESynthesiser.cpp:
@@ -32529,8 +32531,6 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/juce_LAMEEncoderAudioFormat.cpp:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/midi/ump/juce_UMPReceiver.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/midi/ump/juce_UMPMidi1ToMidi2DefaultTranslator.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_events/interprocess/juce_ConnectedChildProcess.h:
 
@@ -32569,16 +32569,6 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_min_element.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/buffers/juce_FloatVectorOperations.cpp:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/pluginterfaces/vst/ivstparameterchanges.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKDataDetectorTypes.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/image_formats/pnglib/pngpriv.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/image_formats/jpglib/jdapimin.c:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/buffers/juce_AudioProcessLoadMeasurer.cpp:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/pthread.h:
 
@@ -33235,8 +33225,6 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-vector.hh:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/IOSurface.framework/Headers/IOSurfaceAPI.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/IOSurface.framework/Headers/IOSurface.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AudioUnit.framework/Headers/MusicDevice.h:
 
@@ -33950,10 +33938,6 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/AE.framework/Headers/AEMach.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/DOMCSS.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/AE.framework/Headers/AEHelpers.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreGraphics.framework/Headers/CGSession.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/oggvorbis/libvorbis-1.3.7/lib/res0.c:
@@ -33981,6 +33965,12 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/ostream:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Headers/LSInfo.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_core/memory/juce_AllocationHooks.cpp:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__exception/exception.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreGraphics.framework/Headers/CGPDFContentStream.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/DiscRecording.framework/Headers/DRMSF.h:
 
@@ -34060,11 +34050,13 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFUUID.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_all_of.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/promote.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Accelerate.framework/Frameworks/vImage.framework/Headers/Histogram.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSDataAsset.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFURL.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFURLEnumerator.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFURLAccess.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/unicode/sheenbidi/Headers/SBAlgorithm.h:
 
@@ -34074,11 +34066,23 @@ CMakeFiles/ClearHost.dir/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/juc
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFTree.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/flac/libFLAC/stream_encoder.c:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/_xlocale.h:
 
-ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSLayoutGuide.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_core/containers/juce_DynamicObject.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Security.framework/Headers/SecTransform.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFTimeZone.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/AXUIElement.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFStringEncodingExt.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFSocket.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/misc/juce_LiveConstantEditor.cpp:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFRunLoop.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/OT/Layout/GPOS/Anchor.hh:
 
@@ -34087,6 +34091,18 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFPropertyList.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFPreferences.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSDictionaryController.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/dispatch/block.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/os/trace.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/native/juce_PerScreenDisplayLinks_mac.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__iterator/reverse_access.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFNotificationCenter.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/OpenGL.framework/Headers/OpenGL.h:
 
@@ -34238,6 +34254,10 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/host_priv.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFURL.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Accelerate.framework/Frameworks/vImage.framework/Headers/Histogram.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Accelerate.framework/Frameworks/vImage.framework/Headers/BasicImageTypes.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-ucd.cc:
@@ -34278,6 +34298,10 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/embedding/juce_XEmbedComponent.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSInflectionRule.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/path.h:
+
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/effects/juce_ImageEffectFilter.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/embedding/juce_HWNDComponent.h:
@@ -34309,14 +34333,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/code_editor/juce_CodeTokeniser.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/code_editor/juce_CPlusPlusCodeTokeniserFunctions.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_devices/midi_io/juce_MidiDevices.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__random/is_valid.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/detail/juce_SimpleShapedText.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFSet.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/windows/juce_TopLevelWindow.h:
 
@@ -34489,14 +34505,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/widgets/juce_TableHeaderComponent.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/keyboard/juce_CaretComponent.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/filebrowser/juce_FileBrowserComponent.cpp:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSRulerView.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/sources/juce_ChannelRemappingAudioSource.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/juce_gui_basics.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/pluginterfaces/base/fplatform.h:
 
@@ -34774,6 +34782,12 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_events/messages/juce_DeletedAtShutdown.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__debug_utils/randomize_range.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_core/containers/juce_ArrayAllocationBase.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/copy_options.h:
+
 /usr/local/include/JUCE-8.0.8/modules/juce_events/messages/juce_CallbackMessage.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/QuartzCore.framework/Headers/CALayer.h:
@@ -34826,13 +34840,13 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_int8_t.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__system_error/error_code.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__numeric/pstl_reduce.h:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_IPAddress_posix.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/components/juce_CachedComponentImage.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__system_error/error_code.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__numeric/pstl_reduce.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ApplicationServices.framework/Frameworks/ATS.framework/Headers/ATSDefines.h:
 
@@ -34885,16 +34899,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /usr/local/include/JUCE-8.0.8/modules/juce_core/threads/juce_ThreadPool.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/threads/juce_ScopedWriteLock.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/layout/juce_ComponentAnimator.cpp:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/system/juce_SystemStats.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSTrackingSeparatorToolbarItem.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSProcessInfo.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/threads/juce_ScopedLock.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreGraphics.framework/Headers/CGWindowLevel.h:
 
@@ -34982,7 +34986,17 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFCharacterSet.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/replace_if.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/u8path.h:
+
 /usr/local/include/JUCE-8.0.8/modules/juce_core/text/juce_Base64.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/layout/juce_ComponentAnimator.cpp:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSTrackingSeparatorToolbarItem.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_core/system/juce_SystemStats.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ModelIO.framework/Headers/MDLMesh.h:
 
@@ -35210,6 +35224,12 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/containers/juce_FixedSizeFunction.h:
 
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/flac/libFLAC/stream_encoder.c:
+
+ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_core/containers/juce_DynamicObject.h:
+
 /usr/local/include/JUCE-8.0.8/modules/juce_core/containers/juce_ArrayBase.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_posix_vdisable.h:
@@ -35320,8 +35340,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/processors/juce_GenericAudioProcessorEditor.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/processors/juce_AudioProcessorParameterGroup.h:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/accessibility/enums/juce_AccessibilityRole.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/float.h:
@@ -35369,10 +35387,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/juce_LADSPAPluginFormat.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/zip/juce_GZIPCompressorOutputStream.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__debug_utils/randomize_range.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/containers/juce_ArrayAllocationBase.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSColorPanel.h:
 
@@ -35442,11 +35456,19 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSImageCell.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__node_handle:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/file_status.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_signed.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/streams/juce_AndroidDocumentInputSource.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CFNetwork.framework/Headers/CFNetServices.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__random/is_valid.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_devices/midi_io/juce_MidiDevices.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_devices/juce_audio_devices.h:
 
@@ -35503,6 +35525,14 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__iterator/prev.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/sources/juce_IIRFilterAudioSource.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/juce_gui_basics.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/filebrowser/juce_FileBrowserComponent.cpp:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSRulerView.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/sources/juce_ChannelRemappingAudioSource.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/properties/juce_TextPropertyComponent.h:
 
@@ -35598,10 +35628,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/pluginterfaces/vst/ivstmessage.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFStringEncodingExt.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/AXUIElement.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/WebPreferences.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/wctype.h:
@@ -35640,6 +35666,12 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CloudKit.framework/Headers/CKReference.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSLayoutAnchor.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/vm_map.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/operations.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/ctype.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_ucontext.h:
@@ -35672,8 +35704,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_ssize_t.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFSocket.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_partition.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/DiscRecording.framework/Headers/DRFile.h:
@@ -35681,14 +35711,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/misc/juce_WebBrowserComponent.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_sigset_t.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Accelerate.framework/Frameworks/vImage.framework/Headers/Geometry.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/message.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/time/juce_PerformanceCounter.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_sigaltstack.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreData.framework/Headers/NSMigrationStage.h:
 
@@ -35788,6 +35810,8 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_blkcnt_t.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/space_info.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/istream:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_symbol_aliasing.h:
@@ -35797,6 +35821,8 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/WebDOMOperations.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSToolbarItem.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/perm_options.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSTableCellView.h:
 
@@ -35831,8 +35857,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_pthread/_pthread_cond_t.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/threads/juce_SpinLock.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_Network_mac.mm:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__memory/allocate_at_least.h:
 
@@ -36028,15 +36052,11 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/thread:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/arm/signal.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreImage.framework/Headers/CIImage.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/mismatch.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/cdefs.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/public.sdk/source/vst/moduleinfo/moduleinfo.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSIndexPath.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/string:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/string.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/streambuf:
 
@@ -36050,15 +36070,31 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/stdlib.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AudioToolbox.framework/Headers/AudioFormat.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/stddef.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/pstl_replace.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/os/workgroup_parallel.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/queue:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__iterator/permutable.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ApplicationServices.framework/Frameworks/QD.framework/Headers/Quickdraw.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/new:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSScriptWhoseTests.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/image_formats/jpglib/jcprepct.c:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/mutex:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreImage.framework/Headers/CoreImage.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/math.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/layout/juce_ComponentMovementWatcher.cpp:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/memory/juce_MemoryBlock.cpp:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/contexts/juce_LowLevelGraphicsSoftwareRenderer.h:
 
@@ -36094,11 +36130,23 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/iomanip:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/limits.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/IOSurface.framework/Headers/IOSurface.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-multimap.hh:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSScriptStandardSuiteCommands.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/fstream:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSErrors.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/vecLib.framework/Headers/Sparse/SolveImplementation.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/exception:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/directory_entry.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-cff-interp-cs-common.hh:
 
@@ -36142,16 +36190,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/bitset:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-multimap.hh:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSScriptStandardSuiteCommands.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/MetalKit.framework/Headers/MetalKit.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/host_special_ports.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format/juce_AudioPluginFormat.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/vm_statistics.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__utility/piecewise_construct.h:
@@ -36171,22 +36209,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_nothrow_constructible.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/cstdint:
-
-/Users/d/JUCEClearHost/src/main.cpp:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/midi/ump/juce_UMPIterator.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/MacMemory.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_replace.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/format_arg.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSSortDescriptor.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/DOMHTMLLIElement.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__utility/integer_sequence.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/simd/matrix_types.h:
 
@@ -36209,20 +36231,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/machine/types.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__utility/exchange.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/max_element.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/mpe/juce_MPENote.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/native/juce_PerScreenDisplayLinks_mac.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFNotificationCenter.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__iterator/reverse_access.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-ot-shaper-hebrew.cc:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/stdio.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__iterator/iterator.h:
 
@@ -36284,10 +36292,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreGraphics.framework/Headers/CGFont.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/os/trace.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/dispatch/block.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/find_if.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/remove_extent.h:
@@ -36306,6 +36310,16 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/remove_const_ref.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/xlocale/_ctype.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/search.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_suseconds_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__ranges/concepts.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/filesystem:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/arm/endian.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_mount_t.h:
@@ -36322,6 +36336,12 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/windows/juce_DialogWindow.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/MetalKit.framework/Headers/MetalKit.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format/juce_AudioPluginFormat.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/host_special_ports.h:
+
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/images/juce_ImageConvolutionKernel.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/rank.h:
@@ -36333,10 +36353,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/image_formats/jpglib/jdinput.c:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/pstl_backends/cpu_backends/any_of.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/cdefs.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreImage.framework/Headers/CIImage.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/arm/arch.h:
 
@@ -36386,6 +36402,14 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreData.framework/Headers/NSIncrementalStore.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKContentRuleList.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__ranges/data.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ApplicationServices.framework/Frameworks/ATSUI.framework/Headers/ATSUnicodeGlyphs.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/directory_iterator.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSFontPanel.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_trivially_destructible.h:
@@ -36401,8 +36425,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreData.framework/Headers/NSFetchRequest.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/deque:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/string.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/midi/ump/juce_UMPacket.h:
 
@@ -36570,8 +36592,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_enum.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_empty.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSTask.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__iterator/back_insert_iterator.h:
@@ -36588,9 +36608,25 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/format/juce_AudioFormatWriter.h:
 
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/midi/ump/juce_UMPIterator.h:
+
+/Users/d/JUCEClearHost/src/main.cpp:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_copy_constructible.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/in_fun_result.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/pluginterfaces/vst/ivstparameterchanges.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKDataDetectorTypes.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/image_formats/pnglib/pngpriv.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/image_formats/jpglib/jdapimin.c:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/buffers/juce_AudioProcessLoadMeasurer.cpp:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/file_time_type.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Network.framework/Headers/advertise_descriptor.h:
 
@@ -36663,20 +36699,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__compare/weak_order.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/dependent_type.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/_xlocale.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSLayoutGuide.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Security.framework/Headers/SecTransform.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFTimeZone.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ModelIO.framework/Headers/MDLTransform.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/mouse/juce_ComponentDragger.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/datasizeof.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/copy_cvref.h:
 
@@ -36764,6 +36786,8 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/files/juce_AndroidDocument.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/path_iterator.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/bit:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__memory/align.h:
@@ -36810,14 +36834,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/equal.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/xlocale/_ctype.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/search.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_suseconds_t.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__ranges/concepts.h:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/OT/Layout/GPOS/PairPos.hh:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/scanning/juce_PluginListComponent.h:
@@ -36829,6 +36845,10 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Security.framework/Headers/SecRandom.h:
 
 /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include/float.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/detail/juce_SimpleShapedText.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFSet.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/pstl_backends/cpu_backends/for_each.h:
 
@@ -36865,8 +36885,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CFNetwork.framework/Headers/CFHost.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_pthread/_pthread_attr_t.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__node_handle:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_object.h:
 
@@ -36980,6 +36998,14 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/menus/juce_PopupMenu.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/max_element.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/mpe/juce_MPENote.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-ot-shaper-hebrew.cc:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/stdio.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Accelerate.framework/Frameworks/vImage.framework/Headers/vImage.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/mouse/juce_MouseInactivityDetector.h:
@@ -37011,6 +37037,10 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/in_in_result.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/OpenGL.framework/Headers/OpenGLAvailability.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/message.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Accelerate.framework/Frameworks/vImage.framework/Headers/Geometry.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_pod.h:
 
@@ -37046,8 +37076,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/juce_AiffAudioFormat.cpp:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_NamedPipe_posix.cpp:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSPredicateEditorRowTemplate.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__iterator/iter_swap.h:
@@ -37061,6 +37089,8 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/thread_switch.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/windows/juce_ResizableWindow.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/directory_options.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__iterator/istreambuf_iterator.h:
 
@@ -37107,10 +37137,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/DOMCSSStyleDeclaration.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__fwd/ostream.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSNibLoading.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__fwd/memory_resource.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSURLSession.h:
 
@@ -37238,55 +37264,35 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__functional/bind_back.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSDataAsset.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__functional/bind.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/promote.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSSearchFieldCell.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/IOKit.framework/Headers/IOSharedLock.h:
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/unicode/sheenbidi/Source/BracketQueue.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/windows/juce_WindowUtils.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSDistributedNotificationCenter.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/DOMMutationEvent.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/cups/language.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/arm/types.h:
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/juce_audio_formats.mm:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/Files.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_specialization.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__charconv/tables.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/vm_inherit.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Network.framework/Headers/ws_options.h:
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/drawables/juce_DrawablePath.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/filebrowser/juce_DirectoryContentsList.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/generate_n.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_is_heap.h:
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/juce_CoreAudioFormat.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFURLAccess.h:
+/usr/local/include/JUCE-8.0.8/modules/juce_core/memory/juce_SharedResourcePointer.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/keyboard/juce_KeyboardFocusTraverser.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/keyboard/juce_KeyboardFocusTraverser.cpp:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/formatter_output.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/copy_move_common.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/juce_VST3Headers.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-face.cc:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_trivial.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CFNetwork.framework/Headers/CFNetwork.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/xlocale/__wctype.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/zip/zlib/inftrees.c:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/formatter_bool.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/AXValue.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/formatter.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/format_to_n_result.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/AXValue.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/oggvorbis/libvorbis-1.3.7/lib/synthesis.c:
 
@@ -37294,17 +37300,33 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/utilities/juce_WindowedSincInterpolator.cpp:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/AXConstants.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/partition_copy.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/format_fwd.h:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/oggvorbis/libvorbis-1.3.7/lib/mdct.c:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_same.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/MacMemory.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_replace.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSSortDescriptor.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/DOMHTMLLIElement.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__utility/integer_sequence.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/format_arg.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__chrono/month.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_is_heap.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/recursive_directory_iterator.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__charconv/tables.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Network.framework/Headers/ws_options.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/filebrowser/juce_DirectoryContentsList.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_sort_heap.h:
 
@@ -37314,15 +37336,55 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/buffer.h:
 
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/geometry/juce_EdgeTable.cpp:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/_locale.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_empty.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/processors/juce_AudioProcessorParameterGroup.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ModelIO.framework/Headers/MDLTransform.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/mouse/juce_ComponentDragger.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/datasizeof.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSProcessInfo.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_core/threads/juce_ScopedLock.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/DOMCSS.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/AE.framework/Headers/AEHelpers.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-bit-set-invertible.hh:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/perms.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/juce_TextLayout.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_is_permutation.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/ios:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__chrono/year_month_weekday.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/extent.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/QuartzCore.framework/Headers/CAConstraintLayoutManager.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_inplace_merge.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__compare/compare_partial_order_fallback.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/effects/juce_GlowEffect.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_reverse.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSTableViewRowAction.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/contexts/juce_GraphicsContext.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/os/workgroup_parallel.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/queue:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/pluginterfaces/vst/ivstunits.h:
 
@@ -37352,6 +37414,8 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__concepts/same_as.h:
 
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/positioning/juce_RelativeRectangle.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/dispatch/queue.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/windows/juce_ScopedMessageBox.h:
@@ -37359,12 +37423,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/keyboard/juce_ModifierKeys.cpp:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/concepts:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/unicode/sheenbidi/Source/BracketQueue.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/cups/language.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSDistributedNotificationCenter.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_fsobj_id_t.h:
 
@@ -37396,10 +37454,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__concepts/copyable.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSLayoutAnchor.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/vm_map.h:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/images/juce_Image.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-object.hh:
@@ -37416,16 +37470,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_nlink_t.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_is_permutation.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__chrono/year_month_weekday.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/extent.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/ios:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSDictionaryController.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/vecLib.framework/Headers/vectorOps.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_equality_comparable.h:
@@ -37434,17 +37478,7 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/layout/juce_ComponentMovementWatcher.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFNumberFormatter.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__compare/compare_strong_order_fallback.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/juce_TextLayout.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/QuartzCore.framework/Headers/CAConstraintLayoutManager.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_inplace_merge.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__compare/compare_partial_order_fallback.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/DOMHTMLDirectoryElement.h:
 
@@ -37530,6 +37564,16 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__bit/blsr.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreText.framework/Headers/CTParagraphStyle.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Security.framework/Headers/cssmerr.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/rotate.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_core/time/juce_PerformanceCounter.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_sigaltstack.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKUIDelegate.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__bit/bit_width.h:
@@ -37588,6 +37632,14 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/public.sdk/source/vst/utility/stringconvert.cpp:
 
+/usr/local/include/JUCE-8.0.8/modules/juce_core/zip/zlib/inftrees.c:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/formatter_bool.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CFNetwork.framework/Headers/CFNetwork.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/xlocale/__wctype.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreData.framework/Headers/NSLightweightMigrationStage.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/positioning/juce_RelativePointPath.h:
@@ -37595,8 +37647,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/replace.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__bit/has_single_bit.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/positioning/juce_RelativeRectangle.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/FSEvents.framework/Headers/FSEvents.h:
 
@@ -37668,21 +37718,7 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/mpe/juce_MPEInstrument.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/vm_inherit.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSSearchFieldCell.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/juce_audio_formats.mm:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_specialization.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/sift_down.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreText.framework/Headers/CTParagraphStyle.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Security.framework/Headers/cssmerr.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/rotate.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/containers/juce_NamedValueSet.cpp:
 
@@ -37693,10 +37729,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSRunningApplication.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_null_pointer.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/memory/juce_SharedResourcePointer.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/juce_CoreAudioFormat.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/AvailabilityMacros.h:
 
@@ -37713,6 +37745,12 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_fsid_t.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/replace_copy.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/juce_VST3Headers.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-face.cc:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_trivial.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/pluginterfaces/vst/ivsteditcontroller.h:
 
@@ -37752,8 +37790,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_set_symmetric_difference.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/formatter.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/find_end.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_trivially_default_constructible.h:
@@ -37786,7 +37822,17 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_socklen_t.h:
 
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/windows/juce_ScopedMessageBox.cpp:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_core/native/juce_PlatformTimer_generic.cpp:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_trivially_move_assignable.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_reverse_copy.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_core/misc/juce_ConsoleApplication.cpp:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__ranges/access.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__memory/unique_ptr.h:
 
@@ -37809,10 +37855,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/pstl_fill.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreGraphics.framework/Headers/CGBase.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ApplicationServices.framework/Frameworks/QD.framework/Headers/Quickdraw.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/new:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__iterator/iter_move.h:
 
@@ -37898,10 +37940,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_for_each.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/iostream:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/stdexcept:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ModelIO.framework/Headers/MDLTexture.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSOrthography.h:
@@ -37972,8 +38010,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/juce_audio_processors.mm:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ApplicationServices.framework/Frameworks/ATSUI.framework/Headers/ATSUnicodeGlyphs.h:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/public.sdk/source/vst/utility/optional.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_equal_range.h:
@@ -37998,13 +38034,19 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSColorWell.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/pstl_replace.h:
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/keyboard/juce_KeyboardFocusTraverser.cpp:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/formatter_output.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/keyboard/juce_KeyboardFocusTraverser.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_core/streams/juce_BufferedInputStream.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/libDER/DERItem.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/sys/_types/_u_int16_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_all_of.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_starts_with.h:
 
@@ -38033,10 +38075,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /usr/local/include/JUCE-8.0.8/modules/juce_events/messages/juce_ApplicationBase.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSScriptCommand.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKContentRuleList.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__ranges/data.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ColorSync.framework/Headers/ColorSync.h:
 
@@ -38070,15 +38108,23 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/cstdarg:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSNibLoading.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__fwd/memory_resource.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/time_value.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/fill_n.h:
 
+/usr/local/include/JUCE-8.0.8/modules/juce_core/misc/juce_ScopeGuard.cpp:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_events/interprocess/juce_NetworkServiceDiscovery.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFNumberFormatter.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/DOMHTMLHRElement.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/_types.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_core/maths/juce_Random.cpp:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSObjectScripting.h:
 
@@ -38100,9 +38146,19 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/partition_point.h:
 
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/sample.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreAudioKit.framework/Headers/AUCustomViewPersistentData.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__filesystem/file_type.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSAffineTransform.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFURLEnumerator.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__format/format_fwd.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/AXConstants.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/partition_copy.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/mach/mach_error.h:
 
@@ -38124,10 +38180,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Accelerate.framework/Frameworks/vImage.framework/Headers/vImage_CVUtilities.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AudioToolbox.framework/Headers/AudioFormat.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/stddef.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/move_backward.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSXMLNodeOptions.h:
@@ -38147,6 +38199,14 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__memory/uninitialized_algorithms.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/pstl_backends/cpu_backends/stable_sort.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/IOKit.framework/Headers/IOSharedLock.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/windows/juce_WindowUtils.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/DOMMutationEvent.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/arm/types.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/netinet6/in6.h:
 
@@ -38179,6 +38239,8 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/detail/juce_Ranges.cpp:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/all_of.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_basics/midi/ump/juce_UMPMidi1ToMidi2DefaultTranslator.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__ranges/from_range.h:
 
@@ -38222,10 +38284,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/keyboard/juce_KeyPress.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/drawables/juce_DrawablePath.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/generate_n.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/pstl_copy.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-ot-maxp-table.hh:
@@ -38242,15 +38300,19 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__config:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/limits.h:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_core/misc/juce_Result.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_gui_extra/misc/juce_LiveConstantEditor.cpp:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/Files.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreFoundation.framework/Headers/CFRunLoop.h:
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/mismatch.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/arm/signal.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__numeric/midpoint.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/stdexcept:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/iostream:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/WebKit.framework/Headers/DOMCSSStyleRule.h:
 
@@ -38269,8 +38331,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Network.framework/Headers/ethernet_channel.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/future:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__functional/bind.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/QuartzCore.framework/Headers/CAOpenGLLayer.h:
 
@@ -38326,8 +38386,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include/__stddef_offsetof.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/replace_if.h:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_gui_basics/mouse/juce_TooltipClient.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Security.framework/Headers/certextensions.h:
@@ -38335,8 +38393,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_min.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__memory/temporary_buffer.h:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSInflectionRule.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/image_formats/pnglib/pngwrite.c:
 
@@ -38366,10 +38422,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/minmax_element.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/geometry/juce_EdgeTable.cpp:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/_locale.h:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/OT/Layout/GSUB/LigatureSet.hh:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/juce_LAMEEncoderAudioFormat.h:
@@ -38386,6 +38438,8 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/for_each_segment.h:
 
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_formats/codecs/flac/libFLAC/include/private/bitmath.h:
+
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSRuleEditor.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Security.framework/Headers/emmspi.h:
@@ -38397,6 +38451,8 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/utilities/juce_VST2ClientExtensions.cpp:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSKeyValueCoding.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/copy_move_common.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/_wctype.h:
 
@@ -38412,8 +38468,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/utilities/juce_AudioParameterFloat.h:
 
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/effects/juce_GlowEffect.h:
-
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__type_traits/is_abstract.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/CoreData.framework/Headers/NSPersistentCloudKitContainerEventRequest.h:
@@ -38428,12 +38482,6 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSKeyValueObserving.h:
 
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSScriptWhoseTests.h:
-
-/usr/local/include/JUCE-8.0.8/modules/juce_graphics/image_formats/jpglib/jcprepct.c:
-
-/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/mutex:
-
 /usr/local/include/JUCE-8.0.8/modules/juce_graphics/fonts/harfbuzz/hb-set.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__utility/terminate_on_exception.h:
@@ -38441,3 +38489,9 @@ ClearHost_artefacts/JuceLibraryCode/JuceHeader.h:
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/__algorithm/ranges_clamp.h:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AudioToolbox.framework/Headers/CoreAudioClock.h:
+
+/usr/local/include/JUCE-8.0.8/modules/juce_audio_processors/format_types/VST3_SDK/public.sdk/source/vst/moduleinfo/moduleinfo.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSIndexPath.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1/string:

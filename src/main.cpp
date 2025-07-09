@@ -1,5 +1,8 @@
 #include <JuceHeader.h>
 #include <map>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 
 // 기본 투명도 설정 (80%)
 static constexpr float DEFAULT_ALPHA = 0.8f;
@@ -482,6 +485,160 @@ public:
     
     juce::Point<int> center;
     LEDState state;
+};
+
+class AudioRecorder {
+public:
+    AudioRecorder() : isRecording(false), sampleRate(44100), numChannels(2) {
+        // WAV 파일 헤더 초기화
+        initializeWavHeader();
+    }
+    
+    void startRecording() {
+        if (isRecording) return;
+        
+        // 현재 시간으로 파일명 생성
+        filename = generateFilename();
+        juce::Logger::writeToLog("Starting recording to: " + filename);
+        
+        // 임시 파일 생성
+        tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                  .getChildFile("clr_temp_recording.wav");
+        
+        // WAV 파일 헤더 작성
+        std::ofstream file(tempFile.getFullPathName().toRawUTF8(), std::ios::binary);
+        if (file.is_open()) {
+            file.write(reinterpret_cast<const char*>(&wavHeader), sizeof(wavHeader));
+            file.close();
+        }
+        
+        isRecording = true;
+        recordedSamples = 0;
+    }
+    
+    void stopRecording() {
+        if (!isRecording) return;
+        
+        juce::Logger::writeToLog("Stopping recording");
+        
+        // WAV 파일 헤더 업데이트
+        updateWavHeader();
+        
+        // 바탕화면으로 파일 이동
+        juce::File desktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
+        juce::File finalFile = desktop.getChildFile(filename);
+        
+        if (tempFile.existsAsFile()) {
+            if (finalFile.existsAsFile()) {
+                finalFile.deleteFile();
+            }
+            tempFile.moveFileTo(finalFile);
+            juce::Logger::writeToLog("Recording saved to: " + finalFile.getFullPathName());
+        }
+        
+        isRecording = false;
+    }
+    
+    void processAudioData(const float* const* inputChannelData, int numInputChannels,
+                         const float* const* outputChannelData, int numOutputChannels,
+                         int numSamples) {
+        if (!isRecording) return;
+        
+        // 출력 오디오 데이터를 파일에 기록
+        std::ofstream file(tempFile.getFullPathName().toRawUTF8(), std::ios::binary | std::ios::app);
+        if (file.is_open()) {
+            for (int sample = 0; sample < numSamples; ++sample) {
+                for (int channel = 0; channel < std::min(numOutputChannels, numChannels); ++channel) {
+                    float sampleValue = outputChannelData[channel][sample];
+                    // float를 16비트 정수로 변환
+                    int16_t intSample = static_cast<int16_t>(sampleValue * 32767.0f);
+                    file.write(reinterpret_cast<const char*>(&intSample), sizeof(int16_t));
+                }
+            }
+            file.close();
+            recordedSamples += numSamples;
+        }
+    }
+    
+    bool isRecordingActive() const { return isRecording; }
+    
+    void setSampleRate(double rate) { sampleRate = rate; }
+    void setNumChannels(int channels) { numChannels = channels; }
+    
+private:
+    struct WavHeader {
+        char riff[4] = {'R', 'I', 'F', 'F'};
+        uint32_t chunkSize = 0;
+        char wave[4] = {'W', 'A', 'V', 'E'};
+        char fmt[4] = {'f', 'm', 't', ' '};
+        uint32_t fmtChunkSize = 16;
+        uint16_t audioFormat = 1; // PCM
+        uint16_t numChannels = 2;
+        uint32_t sampleRate = 0; // 동적으로 설정됨
+        uint32_t byteRate = 0; // 동적으로 계산됨
+        uint16_t blockAlign = 4; // numChannels * bitsPerSample / 8
+        uint16_t bitsPerSample = 16;
+        char data[4] = {'d', 'a', 't', 'a'};
+        uint32_t dataChunkSize = 0;
+    };
+    
+    void initializeWavHeader() {
+        wavHeader.numChannels = numChannels;
+        wavHeader.sampleRate = static_cast<uint32_t>(sampleRate);
+        wavHeader.bitsPerSample = 16;
+        wavHeader.blockAlign = numChannels * wavHeader.bitsPerSample / 8;
+        wavHeader.byteRate = wavHeader.sampleRate * wavHeader.blockAlign;
+        wavHeader.dataChunkSize = 0;
+        wavHeader.chunkSize = 36 + wavHeader.dataChunkSize;
+        
+        // 디버깅: 실제 샘플레이트 로그
+        juce::Logger::writeToLog("AudioRecorder: Initialized with sampleRate = " + juce::String(sampleRate));
+    }
+    
+    void updateWavHeader() {
+        if (!tempFile.existsAsFile()) return;
+        
+        // 데이터 청크 크기 계산
+        uint32_t dataSize = recordedSamples * numChannels * 2; // 16비트 = 2바이트
+        wavHeader.dataChunkSize = dataSize;
+        wavHeader.chunkSize = 36 + dataSize;
+        
+        // 파일 헤더 업데이트
+        std::fstream file(tempFile.getFullPathName().toRawUTF8(), std::ios::binary | std::ios::in | std::ios::out);
+        if (file.is_open()) {
+            file.seekp(0);
+            file.write(reinterpret_cast<const char*>(&wavHeader), sizeof(wavHeader));
+            file.close();
+        }
+    }
+    
+    juce::String generateFilename() {
+        auto now = juce::Time::getCurrentTime();
+        int year = now.getYear();
+        int month = now.getMonth() + 1; // getMonth()는 0부터 시작
+        int day = now.getDayOfMonth();
+        int hour = now.getHours();
+        int minute = now.getMinutes();
+        int second = now.getSeconds();
+        
+        std::ostringstream oss;
+        oss << "clr_" << std::setfill('0') << std::setw(4) << year
+            << std::setw(2) << month
+            << std::setw(2) << day
+            << std::setw(2) << hour
+            << std::setw(2) << minute
+            << std::setw(2) << second << ".wav";
+        
+        return oss.str();
+    }
+    
+    bool isRecording;
+    double sampleRate;
+    int numChannels;
+    juce::String filename;
+    juce::File tempFile;
+    WavHeader wavHeader;
+    uint32_t recordedSamples;
 };
 
 class RecButton {
@@ -1165,6 +1322,9 @@ public:
         
         // 로고 SVG 로드
         loadLogoSVGs();
+        
+        // 오디오 녹음 기능 초기화
+        audioRecorder = std::make_unique<AudioRecorder>();
     }
     ~ClearHostApp() override {
         // 타이머 중지 (가장 먼저)
@@ -1212,6 +1372,12 @@ public:
         logoDrawableB.reset();
         logoDrawableW.reset();
         
+        // 오디오 녹음 정리
+        if (audioRecorder && audioRecorder->isRecordingActive()) {
+            audioRecorder->stopRecording();
+        }
+        audioRecorder.reset();
+        
         // 컴포넌트들 정리
         controlPanel.reset();
         face.reset();
@@ -1224,11 +1390,27 @@ public:
     }
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override {
         if (clearPlugin) clearPlugin->prepareToPlay(sampleRate, samplesPerBlockExpected);
+        
+        // 오디오 녹음기에 샘플레이트 설정
+        if (audioRecorder) {
+            audioRecorder->setSampleRate(sampleRate);
+            audioRecorder->setNumChannels(2); // 기본적으로 스테레오
+        }
     }
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override {
         if (clearPlugin) {
             juce::MidiBuffer midiMessages;
             clearPlugin->processBlock(*bufferToFill.buffer, midiMessages);
+            
+            // 오디오 녹음 처리
+            if (audioRecorder && audioRecorder->isRecordingActive()) {
+                // 입력과 출력 데이터를 녹음기에 전달
+                const float* const* inputData = bufferToFill.buffer->getArrayOfReadPointers();
+                const float* const* outputData = bufferToFill.buffer->getArrayOfReadPointers();
+                audioRecorder->processAudioData(inputData, bufferToFill.buffer->getNumChannels(),
+                                              outputData, bufferToFill.buffer->getNumChannels(),
+                                              bufferToFill.numSamples);
+            }
             
             // 디버깅: 오디오 레벨 확인
             static int debugCounter = 0;
@@ -2019,9 +2201,17 @@ public:
             controlPanel->toggleRecButton();
             juce::Logger::writeToLog("Rec button toggled via LED click - State: " + juce::String(controlPanel->isRecButtonActive() ? "ON" : "OFF"));
             
-            // Rec 버튼이 활성화되면 타이머 시작 (60fps)
+            // Rec 버튼이 활성화되면 녹음 시작
             if (controlPanel->isRecButtonActive()) {
-                startTimer(16);
+                if (audioRecorder) {
+                    audioRecorder->startRecording();
+                }
+                startTimer(16); // 60fps 타이머 시작
+            } else {
+                // Rec 버튼이 비활성화되면 녹음 중지
+                if (audioRecorder && audioRecorder->isRecordingActive()) {
+                    audioRecorder->stopRecording();
+                }
             }
             
             repaint();
@@ -2033,9 +2223,17 @@ public:
             controlPanel->toggleRecButton();
             juce::Logger::writeToLog("Rec button clicked - State: " + juce::String(controlPanel->isRecButtonActive() ? "ON" : "OFF"));
             
-            // Rec 버튼이 활성화되면 타이머 시작 (60fps)
+            // Rec 버튼이 활성화되면 녹음 시작
             if (controlPanel->isRecButtonActive()) {
-                startTimer(16);
+                if (audioRecorder) {
+                    audioRecorder->startRecording();
+                }
+                startTimer(16); // 60fps 타이머 시작
+            } else {
+                // Rec 버튼이 비활성화되면 녹음 중지
+                if (audioRecorder && audioRecorder->isRecordingActive()) {
+                    audioRecorder->stopRecording();
+                }
             }
             
             repaint();
@@ -2765,6 +2963,12 @@ private:
     std::unique_ptr<juce::Drawable> logoDrawableW;
     bool logoSVGsLoaded = false;
     
+    // 오디오 녹음 기능
+    std::unique_ptr<AudioRecorder> audioRecorder;
+    
+    // MainWindow에서 접근할 수 있도록 friend 클래스 선언
+    friend class MainWindow;
+    
     void loadArrowSVGs() {
         // 화살표 SVG 파일들 로드 - 실행 파일 위치 기준으로 Resources 디렉토리 찾기
         juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
@@ -3315,13 +3519,18 @@ public:
         setVisible(true);
     }
     void closeButtonPressed() override {
-        // 앱 종료 시 시스템 출력 소스 복구 (안전하게)
+        // 앱 종료 시 녹음 중지 (안전하게)
         try {
             if (auto* app = dynamic_cast<ClearHostApp*>(getContentComponent())) {
+                // 녹음 중이면 중지
+                if (app->audioRecorder && app->audioRecorder->isRecordingActive()) {
+                    app->audioRecorder->stopRecording();
+                }
+                // 시스템 출력 소스 복구
                 app->restoreSystemOutputDevice();
             }
         } catch (...) {
-            juce::Logger::writeToLog("Error during system output restoration on exit");
+            juce::Logger::writeToLog("Error during cleanup on exit");
         }
         juce::JUCEApplication::getInstance()->systemRequestedQuit();
     }
