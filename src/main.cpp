@@ -3378,6 +3378,9 @@ private:
             // unassigned 선택 시 입력 장치를 비활성화 (묵음 상태)
             juce::Logger::writeToLog("Setting input device to unassigned (silent)");
             
+            // 시스템 출력 장치를 원래대로 복원
+            restoreSystemOutputDevice();
+            
             // 오디오 재시작을 위해 일시 중지
             deviceManager.closeAudioDevice();
             
