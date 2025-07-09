@@ -1,2 +1,3 @@
 # Hashes of file build rules.
+5952de809b1b39a83cfb89a26587baa8 ClearHost_artefacts/JuceLibraryCode/ClearHost/PkgInfo
 29ebbc3d8c455b77c8e0b0b9d3ca86f6 ClearHost_artefacts/JuceLibraryCode/JuceHeader.h

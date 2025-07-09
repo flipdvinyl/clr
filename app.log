@@ -1,0 +1,104 @@
+Loaded font: EuclidCircularB-Light.otf
+Loaded font: EuclidCircularB-LightItalic.otf
+Loaded font: EuclidCircularB-Regular.otf
+Loaded font: EuclidCircularB-RegularItalic.otf
+Loaded font: EuclidCircularB-Medium.otf
+Loaded font: EuclidCircularB-MediumItalic.otf
+Loaded font: EuclidCircularB-Semibold.otf
+Loaded font: EuclidCircularB-SemiboldItalic.otf
+Loaded font: EuclidCircularB-Bold.otf
+Loaded font: EuclidCircularB-BoldItalic.otf
+=== Starting Auto Setup ===
+JUCE initialized successfully
+Audio Device Manager will be initialized
+macOS detected - Core Audio will be used
+Plugin formats will be initialized
+First run already completed, skipping tool installation
+Saving current system output device...
+Saved current system output device: BlackHole 2ch
+=== Auto Setup Complete ===
+Face color: ff7a471d, Luminance: 0.319, Dark mode: OFF
+Trying to load Clear as VST3 (with permission fix)...
+Found Clear VST3: /Library/Audio/Plug-Ins/VST3/Clear.vst3
+Found VST3 format at index 1
+Failed to load Clear VST3: Unable to load VST-3 plug-in file
+Falling back to AudioUnit...
+Found Clear AU: /Library/Audio/Plug-Ins/Components/Clear.component
+Found AudioUnit format at index 0
+Clear AU loaded successfully as fallback
+Set stereo/mono parameter to stereo (AU)
+Registering parameter listener...
+LED set to ON - plugin loaded successfully
+Found 4 input devices
+Input device 0: BlackHole 2ch
+Added System Sound / BlackHole option
+Input device 1: MacBook Pro 마이크
+Input device 2: Microsoft Teams Audio
+Input device 3: ZoomAudioDevice
+Found 5 output devices
+Output device 0: BlackHole 2ch
+Output device 1: 외장 헤드폰
+Output device 2: MacBook Pro 스피커
+Output device 3: Microsoft Teams Audio
+Output device 4: ZoomAudioDevice
+Selected saved input device in ComboBox: 
+Selected saved output device in ComboBox: 
+Loaded saved input device: System Sound / BlackHole
+Loaded saved output device: MacBook Pro 스피커
+SVG logo loaded successfully from: /Users/d/JUCEClearHost/Resources/symbol_b.svg
+SVG logo loaded successfully from: /Users/d/JUCEClearHost/Resources/symbol_w.svg
+audioProcessorParameterChanged: enter idx=8
+audioProcessorParameterChanged: exit idx=8
+Found 4 input devices
+Input device 0: BlackHole 2ch
+Added System Sound / BlackHole option
+Input device 1: MacBook Pro 마이크
+Input device 2: Microsoft Teams Audio
+Input device 3: ZoomAudioDevice
+Found 5 output devices
+Output device 0: BlackHole 2ch
+Output device 1: 외장 헤드폰
+Output device 2: MacBook Pro 스피커
+Output device 3: Microsoft Teams Audio
+Output device 4: ZoomAudioDevice
+Saved input device not found in ComboBox, using first item
+Selected saved output device in ComboBox: MacBook Pro 스피커
+timerCallback: updateKnobsFromPlugin() ìë
+timerCallback: íë¼ë¯¸í° ì ê·¼ OK
+updateKnobsFromPlugin: params.size()=15
+param[1] ptr=4592321808
+param[1] getValue() before
+param[1] getValue() after: 1
+param[14] ptr=4592332912
+param[14] getValue() before
+param[14] getValue() after: 1
+param[12] ptr=4592331392
+param[12] getValue() before
+param[12] getValue() after: 1
+audioProcessorParameterChanged: enter idx=1
+audioProcessorParameterChanged: exit idx=1
+Knob 0 -> Parameter 1 (Ambience Gain) = 0.5
+audioProcessorParameterChanged: enter idx=14
+audioProcessorParameterChanged: exit idx=14
+Knob 1 -> Parameter 14 (Voice Gain) = 0.5
+audioProcessorParameterChanged: enter idx=12
+audioProcessorParameterChanged: exit idx=12
+Knob 2 -> Parameter 12 (Voice Reverb Gain) = 0.5
+Selected input device: System Sound / BlackHole
+Non-OS Sound input selected - restoring original system output device
+Restoring system output device to: BlackHole 2ch
+output audio device set to "BlackHole 2ch"
+Successfully restored system output using: /opt/homebrew/bin/SwitchAudioSource -s "BlackHole 2ch"
+Changing input device to: System Sound / BlackHole
+Device settings saved - Input: System Sound / BlackHole, Output: MacBook Pro 스피커
+Searching for BlackHole device among 4 input devices
+Checking device: BlackHole 2ch
+Successfully connected to System Sound / BlackHole
+Setting system output to BlackHole...
+output audio device set to "BlackHole 2ch"
+Successfully set system output to BlackHole using: /opt/homebrew/bin/SwitchAudioSource -s "BlackHole 2ch"
+Restoring system output device to: BlackHole 2ch
+output audio device set to "BlackHole 2ch"
+Successfully restored system output using: /opt/homebrew/bin/SwitchAudioSource -s "BlackHole 2ch"
+Removing parameter listener...
+libc++abi: Pure virtual function called!

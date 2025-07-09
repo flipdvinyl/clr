@@ -5,6 +5,8 @@
 static constexpr float DEFAULT_ALPHA = 0.8f;
 // 폰트 크기 상수 정의
 static constexpr float DEFAULT_FONT_SIZE = 16.0f;
+// 노브 주변 점 표시 여부
+static constexpr bool KnobDot = false;
 
 void drawDropdownList(juce::Graphics& g,
                       const std::vector<juce::String>& items,
@@ -123,14 +125,14 @@ public:
     
     void draw(juce::Graphics& g) const {
         g.setColour(color);
-        g.fillRect(0, 0, 160, 270); // 160x270 크기, 좌상단 (0,0) 시작
+        g.fillRect(0, 0, 160, 265); // 160x265 크기, 좌상단 (0,0) 시작
         
         // 세퍼레이터 그리기
         // 크기: 145x4, 중앙정렬 센터 좌표 (80,126), 모서리 라운드 2px, 흰색 투명도 20%
         int separatorWidth = 145;
         int separatorHeight = 4;
         int separatorX = 80 - separatorWidth / 2; // 중앙정렬
-        int separatorY = 126 - separatorHeight / 2; // 중앙정렬 (위로 2px 이동)
+        int separatorY = 121 - separatorHeight / 2; // 중앙정렬 (5px 아래로 이동)
         
         g.setColour(juce::Colours::white.withAlpha(0.2f)); // 흰색, 투명도 20%
         g.fillRoundedRectangle(separatorX, separatorY, separatorWidth, separatorHeight, 2.0f);
@@ -292,12 +294,33 @@ public:
         // 0~2 범위를 0~1로 변환하여 각도 계산 (270도 회전 범위)
         float normalizedValue = value / 2.0f;
         float angle = minAngle + normalizedValue * (maxAngle - minAngle);
-        float startX = cx + std::cos(angle) * (radius + 1.0f);
-        float startY = cy + std::sin(angle) * (radius + 1.0f);
-        float endX = cx + std::cos(angle) * (radius - DEFAULT_FONT_SIZE);
-        float endY = cy + std::sin(angle) * (radius - DEFAULT_FONT_SIZE);
+        float startX = cx + std::cos(angle) * (radius + 0.0f); // 시작점을 노브 중심쪽으로 1px 이동
+        float startY = cy + std::sin(angle) * (radius + 0.0f);
+        float endX = cx + std::cos(angle) * (radius - DEFAULT_FONT_SIZE - 1.0f); // 끝점을 노브 중심쪽으로 1px 이동
+        float endY = cy + std::sin(angle) * (radius - DEFAULT_FONT_SIZE - 1.0f);
         g.setColour(indicatorColour); // Face 색상으로 변경
         g.drawLine(startX, startY, endX, endY, 4.0f);
+        
+        // 노브 주변 점 2개 그리기 (KnobDot 변수에 따라 조건부 표시)
+        if (KnobDot) {
+            float dotDistance = 24.0f; // 점과 노브 중심간의 거리 (+1px)
+            float dotRadius = 1.5f; // 점 크기 (지름 3px, -1px)
+            
+            // 1번점: 225도 - 90도 = 135도
+            float dot1Angle = juce::MathConstants<float>::pi + juce::MathConstants<float>::pi * 45.0f / 180.0f - juce::MathConstants<float>::pi * 90.0f / 180.0f; // 135도
+            float dot1X = cx + std::cos(dot1Angle) * dotDistance;
+            float dot1Y = cy + std::sin(dot1Angle) * dotDistance;
+            
+            // 2번점: 135도 - 90도 = 45도
+            float dot2Angle = juce::MathConstants<float>::pi - juce::MathConstants<float>::pi * 45.0f / 180.0f - juce::MathConstants<float>::pi * 90.0f / 180.0f; // 45도
+            float dot2X = cx + std::cos(dot2Angle) * dotDistance;
+            float dot2Y = cy + std::sin(dot2Angle) * dotDistance;
+            
+            // 점 그리기 (노브와 동일한 컬러, 알파값 적용)
+            g.setColour(knobColour);
+            g.fillEllipse(dot1X - dotRadius, dot1Y - dotRadius, dotRadius * 2, dotRadius * 2);
+            g.fillEllipse(dot2X - dotRadius, dot2Y - dotRadius, dotRadius * 2, dotRadius * 2);
+        }
         
         // 레이블 또는 값 표시
         int labelW = area.getWidth();
@@ -483,7 +506,7 @@ public:
         // 2. LED 그리기 (2번 노브 중앙 기준, 위로 69px) - LED는 알파값 적용 안함
         if (knobRects.size() >= 2 && statusLED) {
             juce::Point<int> ledCenter = knobRects[1].getCentre(); // 2번 노브(voice) 중앙
-            ledCenter.y -= 69; // 위로 69px (1px 아래로 이동)
+            ledCenter.y -= 64; // 위로 64px (5px 아래로 이동)
             statusLED->center = ledCenter;
             statusLED->draw(g);
         }
@@ -492,7 +515,7 @@ public:
         // stereoText는 외부에서 updateStereoText()로 업데이트됨
         
         int stereoX = knobRects[1].getCentreX();
-        int stereoY = center.y - 51; // 노브 클러스터 중앙에서 위로 51px (1px 더 위로 이동)
+        int stereoY = center.y - 51; // 노브 클러스터 중앙에서 위로 51px (5px 아래로 이동)
         
         // 텍스트 크기에 맞춰서 위치 계산
         g.setFont(juce::Font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain));
@@ -637,11 +660,11 @@ private:
 
 class ColorPicker {
 public:
-    ColorPicker() : isOpen(false), selectedColor(juce::Colour(0xFFFF9625)), paletteY(270) {
+    ColorPicker() : isOpen(false), selectedColor(juce::Colour(0xFFFF9625)), paletteY(265) { // 5px 아래로 이동
         generatePalette();
     }
     void setPosition(juce::Point<int> pos) { position = pos; }
-    void setPaletteY(int) { paletteY = 270 - paletteH; } // 팔레트 아래쪽이 y=270에 맞게
+    void setPaletteY(int) { paletteY = 265 - paletteH; } // 팔레트 아래쪽이 y=265에 맞게 (5px 아래로 이동)
     void draw(juce::Graphics& g, juce::Colour textColor = juce::Colours::black) const {
         if (isOpen) drawPalette(g);
         
@@ -670,7 +693,7 @@ public:
             g.fillEllipse(position.x - radius, position.y - radius, radius * 2, radius * 2);
         }
     }
-          static constexpr int paletteX = 0;
+          static constexpr int paletteX = -1; // 오른쪽으로 1px 이동
       static constexpr int cellSizeY = 16;
       static constexpr int cellSizeX = 18;
       static constexpr int cols = 9;
@@ -757,7 +780,7 @@ public:
         float alpha = bypassOn ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
         
         // 세퍼레이터 기준 아래로 23px 위치에서 위로 10px 이동, 그리고 위로 8px 더 이동, 그리고 위로 2px 더 이동 (세퍼레이터 Y=126, 높이 4px)
-        int buttonY = 126 + 4 + 23 - 10 - 8 - 2; // 세퍼레이터 아래 끝 + 23px - 10px - 8px - 2px
+        int buttonY = 121 + 4 + 23 - 10 - 8 - 2; // 세퍼레이터 아래 끝 + 23px - 10px - 8px - 2px (5px 아래로 이동)
         
         juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         
@@ -813,7 +836,7 @@ public:
         }
         // preset 클래스 사용하여 그리기 (bypass 상태 전달)
         preset.draw(g, buttonY, alpha);
-        int bypassY = 270 - 4 - 20;
+        int bypassY = 265 - 4 - 20; // 5px 아래로 이동
         int bypassTextWidth = font.getStringWidth("bypass");
         int bypassX = 80 - bypassTextWidth / 2;
         float bypassAlpha = bypassOn ? 1.0f : 0.2f;
@@ -823,7 +846,7 @@ public:
     }
     
     bool hitTestInButton(juce::Point<int> pos) const {
-        int buttonY = 126 + 4 + 23 - 10 - 8 - 2;
+        int buttonY = 121 + 4 + 23 - 10 - 8 - 2; // 5px 아래로 이동
         int inX = 8 + 2;
         juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         int inTextWidth = font.getStringWidth("in");
@@ -831,7 +854,7 @@ public:
     }
     
     bool hitTestOutButton(juce::Point<int> pos) const {
-        int buttonY = 126 + 4 + 23 - 10 - 8 - 2;
+        int buttonY = 121 + 4 + 23 - 10 - 8 - 2; // 5px 아래로 이동
         juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         int outTextWidth = font.getStringWidth("out");
         int outX = 152 - outTextWidth - 2;
@@ -844,12 +867,12 @@ public:
     }
     
     bool hitTestPresetDropdownButton(juce::Point<int> pos) const {
-        int buttonY = 126 + 4 + 23 - 10 - 8 - 2;
+        int buttonY = 121 + 4 + 23 - 10 - 8 - 2; // 5px 아래로 이동
         return preset.hitTestPresetDropdownButton(pos, buttonY);
     }
     
     bool hitTestBypassButton(juce::Point<int> pos) const {
-        int bypassY = 270 - 4 - 20;
+        int bypassY = 265 - 4 - 20; // 5px 아래로 이동
         juce::Font font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain);
         int bypassTextWidth = font.getStringWidth("bypass");
         int bypassX = 80 - bypassTextWidth / 2;
@@ -915,7 +938,7 @@ public:
         
         // ColorPicker 초기화 (오른쪽 아래 위치)
         colorPicker = std::make_unique<ColorPicker>();
-        colorPicker->setPosition(juce::Point<int>(137, 258)); // 왼쪽으로 2px 이동
+        colorPicker->setPosition(juce::Point<int>(139, 253)); // 5px 아래로 이동
         
         loadClearVST3();
         setAudioChannels(2, 2);
@@ -949,7 +972,7 @@ public:
                 juce::Logger::writeToLog("LED set to OFF - plugin failed to load");
             }
         }
-        setSize(1200, 700);
+        setSize(160, 265); // 창 크기를 160x265로 설정 (5px 줄임)
         
         // 노브 컨트롤들 생성
         for (int i = 0; i < 3; ++i) {
@@ -1158,7 +1181,7 @@ public:
         // 로고 그리기 (Face 바로 위, Panel 아래)
         drawLogo(g, face->getTextColor());
         // Panel 그리기 (노브 3개 + LED + Stereo 토글) - 1번 캔버스로 이동
-        juce::Point<int> panelCenter(80, 83); // 노브2(voice) 중앙을 x=80px, y=83px에 위치
+        juce::Point<int> panelCenter(80, 78); // 노브2(voice) 중앙을 x=80px, y=78px에 위치 (5px 아래로 이동)
         if (controlPanel) {
             // Stereo/Mono 버튼 텍스트 업데이트
             juce::String stereoText = "stereo";
@@ -1188,7 +1211,7 @@ public:
             // bypass 상태에 따른 알파값 설정 (Panel과 동일하게)
             float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
             
-            int inButtonY = 126 + 4 + 23 - 10 - 8 - 2;
+            int inButtonY = 121 + 4 + 23 - 10 - 8 - 2; // 5px 아래로 이동
             int dropdownY = inButtonY + 21;
             int dropdownHeight = std::min(MAX_VISIBLE_ITEMS * ITEM_HEIGHT, (int)inputDeviceList.size() * ITEM_HEIGHT);
             inputDropdownRect = juce::Rectangle<int>(10, dropdownY, 140, dropdownHeight);
@@ -1226,7 +1249,7 @@ public:
             float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
             
             // out 버튼 바로 아래 위치 계산 (Bottom 클래스의 out 버튼 위치 참조)
-            int outButtonY = 126 + 4 + 23 - 10 - 8 - 2; // Bottom 클래스의 실제 out 버튼 Y 위치
+            int outButtonY = 121 + 4 + 23 - 10 - 8 - 2; // Bottom 클래스의 실제 out 버튼 Y 위치 (5px 아래로 이동)
             int dropdownY = outButtonY + 21; // out 버튼 바로 아래 20px + 2px - 1px (위로 1px 이동)
             
             // 드롭다운 높이를 최대 5개 아이템으로 제한
@@ -1265,7 +1288,7 @@ public:
             // bypass 상태에 따른 알파값 설정 (Panel과 동일하게)
             float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
             
-            int presetButtonY = 126 + 4 + 23 - 10 - 8 - 2;
+            int presetButtonY = 121 + 4 + 23 - 10 - 8 - 2; // 5px 아래로 이동
             int dropdownY = presetButtonY + 21;
             int dropdownHeight = std::min(MAX_VISIBLE_ITEMS * ITEM_HEIGHT, (int)presetList.size() * ITEM_HEIGHT);
             int dropdownWidth = 140;
@@ -2093,7 +2116,7 @@ public:
                                     params[13]->setValueNotifyingHost(1.0f); // stereo
                                 }
                             }
-                        } else if (selectedPreset == "vocal ref") {
+                        } else if (selectedPreset == "cono") {
                             startAnimation({0.5, 0.1, 0.1});
                             // stereo 설정
                             if (clearPlugin) {
@@ -2426,7 +2449,7 @@ public:
         presetList.push_back("sommers");
         presetList.push_back("clear voice");
         presetList.push_back("dry voice");
-        presetList.push_back("vocal ref");
+        presetList.push_back("cono");
         
         // 기본 프리셋을 첫 번째로 설정
         if (!presetList.empty()) {
@@ -2798,10 +2821,10 @@ private:
         juce::Drawable* logoDrawable = isDarkMode ? logoDrawableW.get() : logoDrawableB.get();
         
         // bottom 영역의 정중앙 계산
-        // 세퍼레이터 아래쪽: Y = 126 + 4 = 130
-        // Face 아래쪽: Y = 270
-        // Bottom 영역 중앙: Y = (130 + 270) / 2 = 200
-        int bottomAreaCenterY = 200;
+        // 세퍼레이터 아래쪽: Y = 121 + 4 = 125 (5px 아래로 이동)
+        // Face 아래쪽: Y = 265 (5px 아래로 이동)
+        // Bottom 영역 중앙: Y = (125 + 265) / 2 = 195 (5px 아래로 이동)
+        int bottomAreaCenterY = 200; // 5px 아래로 이동
         
         // 박스 크기: 17px x 17px (원본)
         int boxSize = 17;
@@ -3120,8 +3143,8 @@ public:
         setUsingNativeTitleBar(true);
         setResizable(true, true);
         setContentOwned(new ClearHostApp(), true);
-        // 고정 창 크기: 160 x 270 픽셀
-        centreWithSize(160, 270);
+        // 고정 창 크기: 160 x 265 픽셀
+        centreWithSize(160, 265);
         
         // 항상 위에 표시되도록 설정 (다른 앱들과 함께 사용할 때 편리함)
         setAlwaysOnTop(true);
