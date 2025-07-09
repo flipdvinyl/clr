@@ -37,3 +37,11 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Resources")
         "$<TARGET_FILE_DIR:ClearHost>/Resources"
     )
 endif()
+
+# 실행 파일을 프로젝트 루트에 복사
+add_custom_command(TARGET ClearHost POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    "$<TARGET_FILE:ClearHost>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ClearHost_artefacts/ClearHost"
+    COMMENT "Copying executable to project root"
+)

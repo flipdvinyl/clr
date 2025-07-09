@@ -484,6 +484,68 @@ public:
     LEDState state;
 };
 
+class RecButton {
+public:
+    RecButton() : isOn(false), blinkTimer(0), blinkState(false) {}
+    
+    void toggle() { 
+        isOn = !isOn; 
+        if (isOn) {
+            blinkTimer = 0;
+            blinkState = true;
+        }
+    }
+    
+    void update() {
+        if (isOn) {
+            blinkTimer++;
+            if (blinkTimer >= 30) { // 0.5초 (60fps 기준 30프레임)
+                blinkState = !blinkState;
+                blinkTimer = 0;
+            }
+        }
+    }
+    
+    void draw(juce::Graphics& g, juce::Point<int> center) const {
+        if (!isOn) {
+            // OFF 상태: 빨간색 (RGB 255,0,0)
+            g.setColour(juce::Colour(255, 0, 0));
+        } else {
+            // ON 상태: 깜빡임 효과 - preset LED OFF 색과 동일한 컬러 사용
+            if (blinkState) {
+                g.setColour(juce::Colour(255, 0, 0)); // 100% 빨간색
+            } else {
+                g.setColour(juce::Colour(0x4D000000)); // 검정색, 30% 알파값 (preset LED OFF와 동일)
+            }
+        }
+        
+        // LED와 동일한 모양 (6px 원)
+        g.fillEllipse(center.x - 3, center.y - 3, 6, 6);
+    }
+    
+    bool hitTest(juce::Point<int> pos) const {
+        // separator 우측 상단 기준으로 위로 13px, 좌로 13px 위치 계산
+        int separatorWidth = 145;
+        int separatorX = 80 - separatorWidth / 2; // 중앙정렬
+        int separatorY = 121 - 4 / 2; // 중앙정렬 (5px 아래로 이동)
+        juce::Point<int> recCenter(separatorX + separatorWidth - 13, separatorY - 13); // separator 우측 상단에서 위로 13px, 좌로 13px
+        
+        float distance = pos.getDistanceFrom(recCenter);
+        return distance <= 8.0f; // 6px 원의 반지름 + 5px 확장 = 8px
+    }
+    
+    bool isActive() const { return isOn; }
+    
+    void setCenter(juce::Point<int> newCenter) { center = newCenter; }
+    
+    juce::Point<int> center;
+    
+private:
+    bool isOn;
+    int blinkTimer;
+    bool blinkState;
+};
+
 class Panel {
 public:
     Panel(juce::Point<int> center, std::vector<float>& knobValues, std::vector<juce::Rectangle<int>>& knobRects, std::unique_ptr<LED>& statusLED, juce::Colour faceColor, std::vector<bool>& showValues, juce::Colour textColor = juce::Colours::black)
@@ -511,7 +573,14 @@ public:
             statusLED->draw(g);
         }
         
-        // 3. Stereo/Mono 토글 버튼 그리기 (알파값 적용)
+        // 3. Rec 버튼 그리기 (separator 우측 상단 기준으로 위로 13px, 좌로 13px)
+        int separatorWidth = 145;
+        int separatorX = 80 - separatorWidth / 2; // 중앙정렬
+        int separatorY = 121 - 4 / 2; // 중앙정렬 (5px 아래로 이동)
+        juce::Point<int> recCenter(separatorX + separatorWidth - 13, separatorY - 13); // separator 우측 상단에서 위로 13px, 좌로 13px
+        recButton.draw(g, recCenter);
+        
+        // 4. Stereo/Mono 토글 버튼 그리기 (알파값 적용)
         // stereoText는 외부에서 updateStereoText()로 업데이트됨
         
         int stereoX = knobRects[1].getCentreX();
@@ -556,6 +625,34 @@ public:
         faceColor = color;
     }
     
+    // Rec 버튼 관련 메서드들
+    void updateRecButton() {
+        recButton.update();
+    }
+    
+    bool hitTestRecButton(juce::Point<int> pos) const {
+        return recButton.hitTest(pos);
+    }
+    
+    void toggleRecButton() {
+        recButton.toggle();
+    }
+    
+    bool isRecButtonActive() const {
+        return recButton.isActive();
+    }
+    
+    // LED hit test를 위한 함수
+    bool hitTestLED(juce::Point<int> pos) const {
+        if (knobRects.size() >= 2 && statusLED) {
+            juce::Point<int> ledCenter = knobRects[1].getCentre(); // 2번 노브(voice) 중앙
+            ledCenter.y -= 64; // 위로 64px (5px 아래로 이동)
+            float distance = pos.getDistanceFrom(ledCenter);
+            return distance <= 3.0f; // 6px 원의 반지름
+        }
+        return false;
+    }
+    
     juce::Point<int> center;
     std::vector<float>& knobValues;
     std::vector<juce::Rectangle<int>>& knobRects;
@@ -566,6 +663,7 @@ public:
     mutable juce::Rectangle<int> stereoMonoRect;
     juce::String stereoText = "stereo";
     bool bypassActive;
+    RecButton recButton;
 };
 
 class Preset {
@@ -671,7 +769,10 @@ public:
         // 라이트/다크모드에 따라 SVG 파일 선택 (로고와 동일한 조건)
         bool isDarkMode = (textColor == juce::Colours::white);
         juce::String svgFileName = isDarkMode ? "picker_w.svg" : "picker_b.svg";
-        juce::File svgFile("/Users/d/JUCEClearHost/Resources/" + svgFileName);
+        // 실행 파일 위치 기준으로 Resources 디렉토리 찾기
+        juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+        juce::File resourcesDir = execFile.getParentDirectory().getParentDirectory().getChildFile("Resources");
+        juce::File svgFile = resourcesDir.getChildFile(svgFileName);
         
         // SVG 아이콘 그리기 (8px x 1.3 = 10.4px, 반올림하여 10px)
         int iconSize = 10;
@@ -1537,6 +1638,11 @@ public:
             firstRun = false;
         }
         
+        // Rec 버튼 업데이트 (깜빡임 효과)
+        if (controlPanel) {
+            controlPanel->updateRecButton();
+        }
+        
         if (isAnimating) {
             double currentTime = juce::Time::getMillisecondCounterHiRes() / 1000.0;
             double elapsedTime = currentTime - animationStartTime;
@@ -1549,27 +1655,38 @@ public:
             repaint();
             if (progress >= 1.0) {
                 isAnimating = false;
-                stopTimer();
-                juce::Logger::writeToLog("Animation completed");
-                // 애니메이션 완료 후 0.5초 뒤에 레이블로 돌아가기
-                startTimer(500);
+                // Rec 버튼이 활성화되어 있으면 타이머 계속 실행, 아니면 정지
+                if (controlPanel && controlPanel->isRecButtonActive()) {
+                    startTimer(16); // 60fps로 깜빡임 업데이트
+                } else {
+                    stopTimer();
+                    juce::Logger::writeToLog("Animation completed");
+                    // 애니메이션 완료 후 0.5초 뒤에 레이블로 돌아가기
+                    startTimer(500);
+                }
             }
         } else {
             // 애니메이션이 아닌 경우: 노브 표시 상태를 레이블로 되돌리기
             resetKnobDisplayStates();
             repaint();
-            stopTimer();
             
-            // 기존의 파라미터 동기화 로직
-            juce::Logger::writeToLog("timerCallback: updateKnobsFromPlugin() 시도");
-            if (!clearPlugin) return;
-            auto params = clearPlugin->getParameters();
-            if (params.size() > 1 && params[1] && params[1]->getName(100).isNotEmpty()) {
-                juce::Logger::writeToLog("timerCallback: 파라미터 접근 OK");
-                updateKnobsFromPlugin();
+            // Rec 버튼이 활성화되어 있으면 타이머 계속 실행, 아니면 정지
+            if (controlPanel && controlPanel->isRecButtonActive()) {
+                startTimer(16); // 60fps로 깜빡임 업데이트
             } else {
-                juce::Logger::writeToLog("timerCallback: 파라미터 접근 불가, 재시도");
-                startTimer(100);
+                stopTimer();
+                
+                // 기존의 파라미터 동기화 로직
+                juce::Logger::writeToLog("timerCallback: updateKnobsFromPlugin() 시도");
+                if (!clearPlugin) return;
+                auto params = clearPlugin->getParameters();
+                if (params.size() > 1 && params[1] && params[1]->getName(100).isNotEmpty()) {
+                    juce::Logger::writeToLog("timerCallback: 파라미터 접근 OK");
+                    updateKnobsFromPlugin();
+                } else {
+                    juce::Logger::writeToLog("timerCallback: 파라미터 접근 불가, 재시도");
+                    startTimer(100);
+                }
             }
         }
     }
@@ -1891,6 +2008,36 @@ public:
                     return;
                 }
             }
+        }
+        
+        // Panel의 LED 클릭 처리 (테스트용)
+        if (controlPanel && controlPanel->hitTestLED(pos)) {
+            juce::Logger::writeToLog("LED clicked - Testing Rec button functionality");
+            // LED 클릭 시 Rec 버튼도 토글 (테스트용)
+            controlPanel->toggleRecButton();
+            juce::Logger::writeToLog("Rec button toggled via LED click - State: " + juce::String(controlPanel->isRecButtonActive() ? "ON" : "OFF"));
+            
+            // Rec 버튼이 활성화되면 타이머 시작 (60fps)
+            if (controlPanel->isRecButtonActive()) {
+                startTimer(16);
+            }
+            
+            repaint();
+            return;
+        }
+        
+        // Panel의 Rec 버튼 클릭 처리
+        if (controlPanel && controlPanel->hitTestRecButton(pos)) {
+            controlPanel->toggleRecButton();
+            juce::Logger::writeToLog("Rec button clicked - State: " + juce::String(controlPanel->isRecButtonActive() ? "ON" : "OFF"));
+            
+            // Rec 버튼이 활성화되면 타이머 시작 (60fps)
+            if (controlPanel->isRecButtonActive()) {
+                startTimer(16);
+            }
+            
+            repaint();
+            return;
         }
         
         // Panel의 Stereo/Mono 버튼 클릭 처리
@@ -2617,31 +2764,43 @@ private:
     bool logoSVGsLoaded = false;
     
     void loadArrowSVGs() {
-        // 화살표 SVG 파일들 로드
-        juce::File arrowBFile = juce::File::getCurrentWorkingDirectory().getChildFile("Resources/arrow_b.svg");
-        juce::File arrowWFile = juce::File::getCurrentWorkingDirectory().getChildFile("Resources/arrow_w.svg");
+        // 화살표 SVG 파일들 로드 - 실행 파일 위치 기준으로 Resources 디렉토리 찾기
+        juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+        juce::File resourcesDir = execFile.getParentDirectory().getParentDirectory().getChildFile("Resources");
+        juce::File arrowBFile = resourcesDir.getChildFile("arrow_b.svg");
+        juce::File arrowWFile = resourcesDir.getChildFile("arrow_w.svg");
         
         if (arrowBFile.existsAsFile()) {
             arrowDrawableB = juce::Drawable::createFromSVGFile(arrowBFile);
+            juce::Logger::writeToLog("Arrow SVG loaded successfully from: " + arrowBFile.getFullPathName());
+        } else {
+            juce::Logger::writeToLog("Arrow SVG file not found: " + arrowBFile.getFullPathName());
         }
         
         if (arrowWFile.existsAsFile()) {
             arrowDrawableW = juce::Drawable::createFromSVGFile(arrowWFile);
+            juce::Logger::writeToLog("Arrow SVG loaded successfully from: " + arrowWFile.getFullPathName());
+        } else {
+            juce::Logger::writeToLog("Arrow SVG file not found: " + arrowWFile.getFullPathName());
         }
     }
     
     void loadLogoSVGs() {
         if (logoSVGsLoaded) return;
         
-        // 로고 SVG 파일들 로드
-        juce::File logoBFile = juce::File::getCurrentWorkingDirectory().getChildFile("Resources/symbol_b.svg");
-        juce::File logoWFile = juce::File::getCurrentWorkingDirectory().getChildFile("Resources/symbol_w.svg");
+        // 로고 SVG 파일들 로드 - 실행 파일 위치 기준으로 Resources 디렉토리 찾기
+        juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+        juce::File resourcesDir = execFile.getParentDirectory().getParentDirectory().getChildFile("Resources");
+        juce::File logoBFile = resourcesDir.getChildFile("symbol_b.svg");
+        juce::File logoWFile = resourcesDir.getChildFile("symbol_w.svg");
         
         if (logoBFile.existsAsFile()) {
             logoDrawableB = juce::Drawable::createFromSVGFile(logoBFile);
             if (logoDrawableB) {
                 juce::Logger::writeToLog("SVG logo loaded successfully from: " + logoBFile.getFullPathName());
             }
+        } else {
+            juce::Logger::writeToLog("Logo SVG file not found: " + logoBFile.getFullPathName());
         }
         
         if (logoWFile.existsAsFile()) {
@@ -2649,6 +2808,8 @@ private:
             if (logoDrawableW) {
                 juce::Logger::writeToLog("SVG logo loaded successfully from: " + logoWFile.getFullPathName());
             }
+        } else {
+            juce::Logger::writeToLog("Logo SVG file not found: " + logoWFile.getFullPathName());
         }
         
         logoSVGsLoaded = true;
