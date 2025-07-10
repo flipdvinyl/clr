@@ -1198,11 +1198,6 @@ public:
         animationTimerInterval = 16;
         originalSystemOutputDevice = "";
         
-        // 장치 설정 파일 초기화
-        deviceSettingsFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                            .getChildFile("ClearHost")
-                            .getChildFile("device_settings.conf");
-        
         static EuclidLookAndFeel euclidLF;
         juce::LookAndFeel::setDefaultLookAndFeel(&euclidLF);
         
@@ -1293,10 +1288,6 @@ public:
         updateInputDeviceList();
         updateOutputDeviceList();
         updatePresetList();
-        
-        // 저장된 장치 설정 로드 및 적용
-        loadDeviceSettings();
-        applySavedDeviceSettings();
         
         // 라벨 설정
         inputDeviceLabel.setText("Audio Input:", juce::dontSendNotification);
@@ -2774,9 +2765,57 @@ public:
             }
         }
         
-        // 기본 출력 장치를 첫 번째로 설정
+        // 시스템 출력 장치명 감지 (macOS)
+#if JUCE_MAC
+        juce::String sysOutputName;
+        {
+            FILE* pipe = popen("SwitchAudioSource -c", "r");
+            if (pipe) {
+                char buffer[256] = {0};
+                if (fgets(buffer, sizeof(buffer), pipe)) {
+                    sysOutputName = juce::String::fromUTF8(buffer).trim();
+                    juce::Logger::writeToLog("System output device detected: " + sysOutputName);
+                }
+                pclose(pipe);
+            }
+        }
+        
+        // 리스트에서 일치하는 항목이 있으면 선택
+        bool found = false;
+        juce::Logger::writeToLog("Available output devices:");
+        for (const auto& name : outputDeviceList) {
+            juce::Logger::writeToLog("  - " + name);
+            if (name == sysOutputName) {
+                currentOutputDevice = name;
+                found = true;
+                juce::Logger::writeToLog("MATCH FOUND! Setting currentOutputDevice to: " + name);
+                break;
+            }
+        }
+        
+        if (!found) {
+            if (!outputDeviceList.empty()) {
+                currentOutputDevice = outputDeviceList[0];
+                juce::Logger::writeToLog("No match found, using first device: " + currentOutputDevice);
+            }
+        }
+#else
+        // macOS가 아니면 기존대로 첫 번째 항목 선택
         if (!outputDeviceList.empty()) {
             currentOutputDevice = outputDeviceList[0];
+        }
+#endif
+        // ComboBox에도 반영
+        if (outputDeviceBox) {
+            outputDeviceBox->clear();
+            int selIdx = 1;
+            int foundIdx = -1;
+            for (const auto& name : outputDeviceList) {
+                outputDeviceBox->addItem(name, selIdx);
+                if (name == currentOutputDevice) foundIdx = selIdx;
+                ++selIdx;
+            }
+            if (foundIdx > 0) outputDeviceBox->setSelectedId(foundIdx, juce::dontSendNotification);
         }
     }
     
@@ -2830,73 +2869,7 @@ public:
         }
     }
     
-    void saveDeviceSettings() {
-        if (!deviceSettingsFile.existsAsFile()) {
-            deviceSettingsFile.create();
-        }
-        
-        juce::PropertiesFile settings(deviceSettingsFile, juce::PropertiesFile::Options());
-        // 입력 장치 설정은 저장하지 않음 (항상 unassigned로 강제 설정)
-        settings.setValue("lastOutputDevice", currentOutputDevice);
-        settings.save();
-        
-        juce::Logger::writeToLog("Device settings saved - Output: " + currentOutputDevice + " (Input always unassigned)");
-    }
-    
-    void loadDeviceSettings() {
-        if (deviceSettingsFile.existsAsFile()) {
-            juce::PropertiesFile settings(deviceSettingsFile, juce::PropertiesFile::Options());
-            juce::String savedOutputDevice = settings.getValue("lastOutputDevice", "");
-            
-            // 입력 장치는 강제로 unassigned로 설정 (묵음 상태)
-            currentInputDevice = "unassigned";
-            juce::Logger::writeToLog("Input device forced to unassigned (silent)");
-            
-            if (savedOutputDevice.isNotEmpty()) {
-                currentOutputDevice = savedOutputDevice;
-                juce::Logger::writeToLog("Loaded saved output device: " + currentOutputDevice);
-            }
-        }
-    }
-    
-    void applySavedDeviceSettings() {
-        // 장치 리스트 업데이트
-        updateInputDeviceList();
-        updateOutputDeviceList();
-        
-        // 입력 장치는 강제로 unassigned로 설정 (묵음 상태)
-        currentInputDevice = "unassigned";
-        juce::Logger::writeToLog("Set current input device to unassigned (silent)");
-        
-        // 실제 오디오 장치도 입력 비활성화
-        auto currentSetup = deviceManager.getAudioDeviceSetup();
-        currentSetup.inputDeviceName = ""; // 빈 문자열로 설정하여 입력 비활성화
-        deviceManager.setAudioDeviceSetup(currentSetup, true);
-        juce::Logger::writeToLog("Audio input device disabled");
-        
-        // 출력 장치는 현재 시스템에 설정된 장치를 그대로 사용
-        // 시스템 출력은 건드리지 않고, 앱 내부에서만 현재 시스템 출력 장치를 사용
-        auto* deviceType = deviceManager.getCurrentDeviceTypeObject();
-        if (deviceType) {
-            try {
-                auto outputNames = deviceType->getDeviceNames(false);
-                if (!outputNames.isEmpty()) {
-                    // 현재 시스템에 설정된 출력 장치를 찾아서 앱 내부 설정으로 사용
-                    currentOutputDevice = outputNames[0]; // 시스템 기본 출력 장치
-                    juce::Logger::writeToLog("Using current system output device: " + currentOutputDevice);
-                    
-                    // 앱 내부 출력 장치 설정 (시스템 출력은 변경하지 않음)
-                    currentSetup.outputDeviceName = currentOutputDevice;
-                    deviceManager.setAudioDeviceSetup(currentSetup, true);
-                }
-            } catch (...) {
-                juce::Logger::writeToLog("Error getting current system output device");
-            }
-        }
-        
-        // ComboBox도 업데이트
-        updateAudioDeviceLists();
-    }
+
 
 private:
     juce::AudioPluginFormatManager pluginManager;
@@ -2929,9 +2902,6 @@ private:
     
     // 첫 실행 여부 확인용 파일 경로
     juce::File firstRunFile;
-    
-    // 장치 설정 저장용 파일 경로
-    juce::File deviceSettingsFile;
     
     std::vector<juce::Rectangle<int>> knobRects;
     std::vector<float> knobValues;
@@ -3396,9 +3366,6 @@ private:
         juce::Logger::writeToLog("Changing input device to: " + deviceName);
         currentInputDevice = deviceName; // 현재 선택된 장치 업데이트
         
-        // 장치 설정 저장
-        saveDeviceSettings();
-        
         if (deviceName == "unassigned") {
             // unassigned 선택 시 입력 장치를 비활성화 (묵음 상태)
             juce::Logger::writeToLog("Setting input device to unassigned (silent)");
@@ -3496,9 +3463,6 @@ private:
     void changeAudioOutputDevice(const juce::String& deviceName) {
         juce::Logger::writeToLog("Changing output device to: " + deviceName);
         currentOutputDevice = deviceName; // 현재 선택된 장치 업데이트
-        
-        // 장치 설정 저장
-        saveDeviceSettings();
         
         if (deviceName == "외장 헤드폰 (Manual)") {
             // 수동으로 추가된 외장 헤드폰 처리
