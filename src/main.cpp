@@ -534,9 +534,34 @@ public:
             }
             tempFile.moveFileTo(finalFile);
             juce::Logger::writeToLog("Recording saved to: " + finalFile.getFullPathName());
+            
+            // 바탕화면 폴더 열기
+            openDesktopFolder();
         }
         
         isRecording = false;
+    }
+    
+    void openDesktopFolder() {
+        juce::File desktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
+        
+        #if JUCE_MAC
+        // macOS: Finder에서 바탕화면 열기
+        juce::String command = "open \"" + desktop.getFullPathName() + "\"";
+        #elif JUCE_WINDOWS
+        // Windows: 탐색기에서 바탕화면 열기
+        juce::String command = "explorer \"" + desktop.getFullPathName() + "\"";
+        #else
+        // Linux: 파일 관리자로 바탕화면 열기
+        juce::String command = "xdg-open \"" + desktop.getFullPathName() + "\"";
+        #endif
+        
+        int result = system(command.toRawUTF8());
+        if (result == 0) {
+            juce::Logger::writeToLog("Successfully opened desktop folder");
+        } else {
+            juce::Logger::writeToLog("Failed to open desktop folder");
+        }
     }
     
     void processAudioData(const float* const* inputChannelData, int numInputChannels,
