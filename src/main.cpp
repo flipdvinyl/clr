@@ -24,17 +24,34 @@ void drawDropdownList(juce::Graphics& g,
                       float alpha = DEFAULT_ALPHA,
                       juce::Colour textColor = juce::Colours::black) {
     outRects.clear();
+    
+    // 벡터가 비어있거나 scrollOffset이 잘못된 경우 안전하게 처리
+    if (items.empty() || scrollOffset < 0 || scrollOffset >= (int)items.size()) {
+        return;
+    }
+    
     int visibleCount = std::min(maxVisible, (int)items.size() - scrollOffset);
     g.setFont(juce::Font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain));
+    
     for (int i = 0; i < visibleCount; ++i) {
         int actualIndex = i + scrollOffset;
+        
+        // 인덱스 범위 재확인 (이중 안전장치)
+        if (actualIndex < 0 || actualIndex >= (int)items.size()) {
+            continue;
+        }
+        
         juce::Rectangle<int> itemRect(dropdownRect.getX(), dropdownRect.getY() + i * itemHeight, dropdownRect.getWidth(), itemHeight);
         outRects.push_back(itemRect);
-        bool isSelected = (items[actualIndex] == selectedItem);
+        
+        const juce::String& currentItem = items[actualIndex];
+        bool isSelected = (currentItem == selectedItem);
+        
         g.setColour(textColor.withAlpha(alpha));
-        g.drawText(items[actualIndex].toLowerCase(), itemRect.reduced(textPad, 0), textJustify);
+        g.drawText(currentItem.toLowerCase(), itemRect.reduced(textPad, 0), textJustify);
+        
         if (isSelected) {
-            int textWidth = g.getCurrentFont().getStringWidth(items[actualIndex].toLowerCase());
+            int textWidth = g.getCurrentFont().getStringWidth(currentItem.toLowerCase());
             int underlineY = itemRect.getY() + 15;
             int underlineX;
             if (textJustify == juce::Justification::centredRight) {
@@ -489,9 +506,29 @@ public:
 
 class AudioRecorder {
 public:
-    AudioRecorder() : isRecording(false), sampleRate(44100), numChannels(2) {
+    AudioRecorder() : isRecording(false), sampleRate(44100), numChannels(2), fileStream(nullptr), 
+                     bufferSize(65536), bufferIndex(0), audioBuffer(nullptr), 
+                     writeBuffer(nullptr), writeBufferSize(0), isWriting(false) {
         // WAV 파일 헤더 초기화
         initializeWavHeader();
+        // 오디오 버퍼 초기화 (큰 버퍼로 변경)
+        audioBuffer = new int16_t[bufferSize * numChannels];
+        // 쓰기 버퍼 초기화 (별도 스레드용)
+        writeBufferSize = bufferSize * numChannels;
+        writeBuffer = new int16_t[writeBufferSize];
+    }
+    
+    ~AudioRecorder() {
+        if (fileStream) {
+            fileStream->close();
+            delete fileStream;
+        }
+        if (audioBuffer) {
+            delete[] audioBuffer;
+        }
+        if (writeBuffer) {
+            delete[] writeBuffer;
+        }
     }
     
     void startRecording() {
@@ -505,165 +542,174 @@ public:
         tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
                   .getChildFile("clr_temp_recording.wav");
         
-        // WAV 파일 헤더 작성
-        std::ofstream file(tempFile.getFullPathName().toRawUTF8(), std::ios::binary);
-        if (file.is_open()) {
-            file.write(reinterpret_cast<const char*>(&wavHeader), sizeof(wavHeader));
-            file.close();
+        // 파일 스트림 열기
+        fileStream = new std::ofstream(tempFile.getFullPathName().toRawUTF8(), std::ios::binary);
+        if (!fileStream->is_open()) {
+            juce::Logger::writeToLog("Failed to open recording file");
+            delete fileStream;
+            fileStream = nullptr;
+            return;
         }
         
+        // WAV 헤더 쓰기
+        fileStream->write(reinterpret_cast<const char*>(&wavHeader), sizeof(wavHeader));
+        fileStream->flush();
+        
+        // 녹음 상태 초기화
         isRecording = true;
-        recordedSamples = 0;
+        bufferIndex = 0;
+        totalSamples = 0;
+        isWriting = false;
     }
     
     void stopRecording() {
         if (!isRecording) return;
         
-        juce::Logger::writeToLog("Stopping recording");
+        isRecording = false;
         
-        // WAV 파일 헤더 업데이트
-        updateWavHeader();
+        // 남은 버퍼 데이터 쓰기
+        if (bufferIndex > 0) {
+            flushBuffer();
+        }
         
-        // 바탕화면으로 파일 이동
+        // 파일 닫기
+        if (fileStream) {
+            fileStream->close();
+            delete fileStream;
+            fileStream = nullptr;
+        }
+        
+        // 최종 파일로 이동
+        if (!tempFile.existsAsFile()) {
+            juce::Logger::writeToLog("Recording file not found");
+            return;
+        }
+        
+        // 데스크톱으로 파일 이동
         juce::File desktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
         juce::File finalFile = desktop.getChildFile(filename);
         
-        if (tempFile.existsAsFile()) {
-            if (finalFile.existsAsFile()) {
-                finalFile.deleteFile();
-            }
-            tempFile.moveFileTo(finalFile);
+        if (tempFile.moveFileTo(finalFile)) {
             juce::Logger::writeToLog("Recording saved to: " + finalFile.getFullPathName());
-            
-            // 바탕화면 폴더 열기
-            openDesktopFolder();
+            // 데스크톱 폴더 열기
+            finalFile.revealToUser();
+        } else {
+            juce::Logger::writeToLog("Failed to save recording");
         }
-        
-        isRecording = false;
     }
     
-    void openDesktopFolder() {
-        juce::File desktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
-        
-        #if JUCE_MAC
-        // macOS: Finder에서 바탕화면 열기
-        juce::String command = "open \"" + desktop.getFullPathName() + "\"";
-        #elif JUCE_WINDOWS
-        // Windows: 탐색기에서 바탕화면 열기
-        juce::String command = "explorer \"" + desktop.getFullPathName() + "\"";
-        #else
-        // Linux: 파일 관리자로 바탕화면 열기
-        juce::String command = "xdg-open \"" + desktop.getFullPathName() + "\"";
-        #endif
-        
-        int result = system(command.toRawUTF8());
-        if (result == 0) {
-            juce::Logger::writeToLog("Successfully opened desktop folder");
-        } else {
-            juce::Logger::writeToLog("Failed to open desktop folder");
-        }
+    bool isRecordingActive() const {
+        return isRecording;
     }
     
     void processAudioData(const float* const* inputChannelData, int numInputChannels,
                          const float* const* outputChannelData, int numOutputChannels,
                          int numSamples) {
-        if (!isRecording) return;
+        if (!isRecording || !fileStream || !fileStream->is_open() || !audioBuffer) return;
         
-        // 출력 오디오 데이터를 파일에 기록
-        std::ofstream file(tempFile.getFullPathName().toRawUTF8(), std::ios::binary | std::ios::app);
-        if (file.is_open()) {
-            for (int sample = 0; sample < numSamples; ++sample) {
-                for (int channel = 0; channel < std::min(numOutputChannels, numChannels); ++channel) {
-                    float sampleValue = outputChannelData[channel][sample];
-                    // float를 16비트 정수로 변환
-                    int16_t intSample = static_cast<int16_t>(sampleValue * 32767.0f);
-                    file.write(reinterpret_cast<const char*>(&intSample), sizeof(int16_t));
+        // 출력 오디오 데이터를 버퍼에 추가 (최소한의 처리만)
+        for (int sample = 0; sample < numSamples; ++sample) {
+            for (int channel = 0; channel < std::min(numOutputChannels, numChannels); ++channel) {
+                float sampleValue = outputChannelData[channel][sample];
+                // float를 16비트 정수로 변환 (클리핑 방지)
+                sampleValue = juce::jlimit(-1.0f, 1.0f, sampleValue);
+                int16_t intSample = static_cast<int16_t>(sampleValue * 32767.0f);
+                
+                int bufferPos = bufferIndex * numChannels + channel;
+                if (bufferPos < bufferSize * numChannels) {
+                    audioBuffer[bufferPos] = intSample;
                 }
             }
-            file.close();
-            recordedSamples += numSamples;
+            bufferIndex++;
+            totalSamples++;
+            
+            // 버퍼가 가득 찰 때만 파일에 쓰기 (매우 큰 버퍼)
+            if (bufferIndex >= bufferSize) {
+                // 별도 스레드에서 파일 쓰기 (오디오 스레드 블록 방지)
+                if (!isWriting) {
+                    std::memcpy(writeBuffer, audioBuffer, bufferSize * numChannels * sizeof(int16_t));
+                    isWriting = true;
+                    
+                    // 비동기 파일 쓰기 (간단한 방식)
+                    std::thread([this]() {
+                        if (fileStream && fileStream->is_open()) {
+                            fileStream->write(reinterpret_cast<const char*>(writeBuffer), 
+                                           bufferSize * numChannels * sizeof(int16_t));
+                            fileStream->flush();
+                        }
+                        isWriting = false;
+                    }).detach();
+                }
+                bufferIndex = 0;
+            }
         }
     }
     
-    bool isRecordingActive() const { return isRecording; }
-    
-    void setSampleRate(double rate) { sampleRate = rate; }
-    void setNumChannels(int channels) { numChannels = channels; }
-    
 private:
-    struct WavHeader {
-        char riff[4] = {'R', 'I', 'F', 'F'};
-        uint32_t chunkSize = 0;
-        char wave[4] = {'W', 'A', 'V', 'E'};
-        char fmt[4] = {'f', 'm', 't', ' '};
-        uint32_t fmtChunkSize = 16;
-        uint16_t audioFormat = 1; // PCM
-        uint16_t numChannels = 2;
-        uint32_t sampleRate = 0; // 동적으로 설정됨
-        uint32_t byteRate = 0; // 동적으로 계산됨
-        uint16_t blockAlign = 4; // numChannels * bitsPerSample / 8
-        uint16_t bitsPerSample = 16;
-        char data[4] = {'d', 'a', 't', 'a'};
-        uint32_t dataChunkSize = 0;
-    };
-    
     void initializeWavHeader() {
+        // WAV 헤더 초기화 (기존과 동일)
+        std::memcpy(wavHeader.riff, "RIFF", 4);
+        wavHeader.fileSize = 0; // 나중에 업데이트
+        std::memcpy(wavHeader.wave, "WAVE", 4);
+        std::memcpy(wavHeader.fmt, "fmt ", 4);
+        wavHeader.fmtSize = 16;
+        wavHeader.audioFormat = 1;
         wavHeader.numChannels = numChannels;
-        wavHeader.sampleRate = static_cast<uint32_t>(sampleRate);
+        wavHeader.sampleRate = sampleRate;
+        wavHeader.byteRate = sampleRate * numChannels * 2;
+        wavHeader.blockAlign = numChannels * 2;
         wavHeader.bitsPerSample = 16;
-        wavHeader.blockAlign = numChannels * wavHeader.bitsPerSample / 8;
-        wavHeader.byteRate = wavHeader.sampleRate * wavHeader.blockAlign;
-        wavHeader.dataChunkSize = 0;
-        wavHeader.chunkSize = 36 + wavHeader.dataChunkSize;
-        
-        // 디버깅: 실제 샘플레이트 로그
-        juce::Logger::writeToLog("AudioRecorder: Initialized with sampleRate = " + juce::String(sampleRate));
+        std::memcpy(wavHeader.data, "data", 4);
+        wavHeader.dataSize = 0; // 나중에 업데이트
     }
     
-    void updateWavHeader() {
-        if (!tempFile.existsAsFile()) return;
-        
-        // 데이터 청크 크기 계산
-        uint32_t dataSize = recordedSamples * numChannels * 2; // 16비트 = 2바이트
-        wavHeader.dataChunkSize = dataSize;
-        wavHeader.chunkSize = 36 + dataSize;
-        
-        // 파일 헤더 업데이트
-        std::fstream file(tempFile.getFullPathName().toRawUTF8(), std::ios::binary | std::ios::in | std::ios::out);
-        if (file.is_open()) {
-            file.seekp(0);
-            file.write(reinterpret_cast<const char*>(&wavHeader), sizeof(wavHeader));
-            file.close();
+    void flushBuffer() {
+        if (bufferIndex > 0 && fileStream && fileStream->is_open()) {
+            fileStream->write(reinterpret_cast<const char*>(audioBuffer), 
+                           bufferIndex * numChannels * sizeof(int16_t));
+            fileStream->flush();
         }
     }
     
     juce::String generateFilename() {
-        auto now = juce::Time::getCurrentTime();
-        int year = now.getYear();
-        int month = now.getMonth() + 1; // getMonth()는 0부터 시작
-        int day = now.getDayOfMonth();
-        int hour = now.getHours();
-        int minute = now.getMinutes();
-        int second = now.getSeconds();
-        
-        std::ostringstream oss;
-        oss << "clr_" << std::setfill('0') << std::setw(4) << year
-            << std::setw(2) << month
-            << std::setw(2) << day
-            << std::setw(2) << hour
-            << std::setw(2) << minute
-            << std::setw(2) << second << ".wav";
-        
-        return oss.str();
+        juce::Time now = juce::Time::getCurrentTime();
+        return "clr_" + now.formatted("%Y%m%d%H%M%S") + ".wav";
     }
     
     bool isRecording;
-    double sampleRate;
+    int sampleRate;
     int numChannels;
-    juce::String filename;
+    std::ofstream* fileStream;
     juce::File tempFile;
-    WavHeader wavHeader;
-    uint32_t recordedSamples;
+    juce::String filename;
+    
+    // 큰 버퍼로 변경 (약 1.5초 분량)
+    int bufferSize;
+    int bufferIndex;
+    int16_t* audioBuffer;
+    int totalSamples;
+    
+    // 별도 쓰기 버퍼 (스레드 안전)
+    int16_t* writeBuffer;
+    int writeBufferSize;
+    std::atomic<bool> isWriting;
+    
+    // WAV 헤더
+    struct WavHeader {
+        char riff[4];
+        uint32_t fileSize;
+        char wave[4];
+        char fmt[4];
+        uint32_t fmtSize;
+        uint16_t audioFormat;
+        uint16_t numChannels;
+        uint32_t sampleRate;
+        uint32_t byteRate;
+        uint16_t blockAlign;
+        uint16_t bitsPerSample;
+        char data[4];
+        uint32_t dataSize;
+    } wavHeader;
 };
 
 class RecButton {
@@ -681,7 +727,7 @@ public:
     void update() {
         if (isOn) {
             blinkTimer++;
-            if (blinkTimer >= 30) { // 0.5초 (60fps 기준 30프레임)
+            if (blinkTimer >= 5) { // 0.5초 (10fps 기준 5프레임)
                 blinkState = !blinkState;
                 blinkTimer = 0;
             }
@@ -750,7 +796,7 @@ public:
         cluster.draw(g, mousePos);
         
         // 2. LED 그리기 (2번 노브 중앙 기준, 위로 69px) - LED는 알파값 적용 안함
-        if (knobRects.size() >= 2 && statusLED) {
+        if (knobRects.size() >= 2 && statusLED && knobRects[1].getWidth() > 0 && knobRects[1].getHeight() > 0) {
             juce::Point<int> ledCenter = knobRects[1].getCentre(); // 2번 노브(voice) 중앙
             ledCenter.y -= 64; // 위로 64px (5px 아래로 이동)
             statusLED->center = ledCenter;
@@ -767,7 +813,7 @@ public:
         // 4. Stereo/Mono 토글 버튼 그리기 (알파값 적용)
         // stereoText는 외부에서 updateStereoText()로 업데이트됨
         
-        int stereoX = knobRects[1].getCentreX();
+        int stereoX = (knobRects.size() >= 2 && knobRects[1].getWidth() > 0 && knobRects[1].getHeight() > 0) ? knobRects[1].getCentreX() : center.x;
         int stereoY = center.y - 51; // 노브 클러스터 중앙에서 위로 51px (5px 아래로 이동)
         
         // 텍스트 크기에 맞춰서 위치 계산
@@ -793,7 +839,7 @@ public:
     // 노브 hit test를 위한 함수
     int hitTestKnob(juce::Point<int> pos) const {
         for (int i = 0; i < knobRects.size(); ++i) {
-            if (knobRects[i].contains(pos)) {
+            if (knobRects[i].getWidth() > 0 && knobRects[i].getHeight() > 0 && knobRects[i].contains(pos)) {
                 return i;
             }
         }
@@ -828,7 +874,7 @@ public:
     
     // LED hit test를 위한 함수
     bool hitTestLED(juce::Point<int> pos) const {
-        if (knobRects.size() >= 2 && statusLED) {
+        if (knobRects.size() >= 2 && statusLED && knobRects[1].getWidth() > 0 && knobRects[1].getHeight() > 0) {
             juce::Point<int> ledCenter = knobRects[1].getCentre(); // 2번 노브(voice) 중앙
             ledCenter.y -= 64; // 위로 64px (5px 아래로 이동)
             float distance = pos.getDistanceFrom(ledCenter);
@@ -953,10 +999,18 @@ public:
         // 라이트/다크모드에 따라 SVG 파일 선택 (로고와 동일한 조건)
         bool isDarkMode = (textColor == juce::Colours::white);
         juce::String svgFileName = isDarkMode ? "picker_w.svg" : "picker_b.svg";
-        // 실행 파일 위치 기준으로 Resources 디렉토리 찾기
-        juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
-        juce::File resourcesDir = execFile.getParentDirectory().getParentDirectory().getChildFile("Resources");
+        // main.cpp 기준으로 Resources 디렉토리 찾기
+        juce::File currentDir = juce::File::getCurrentWorkingDirectory();
+        juce::File resourcesDir = currentDir.getChildFile("Resources");
         juce::File svgFile = resourcesDir.getChildFile(svgFileName);
+        
+        // 첫 번째 시도: 현재 작업 디렉토리의 Resources
+        if (!svgFile.existsAsFile()) {
+            // 두 번째 시도: 실행 파일 위치의 Resources
+            juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+            juce::File execResourcesDir = execFile.getParentDirectory().getChildFile("Resources");
+            svgFile = execResourcesDir.getChildFile(svgFileName);
+        }
         
         // SVG 아이콘 그리기 (8px x 1.3 = 10.4px, 반올림하여 10px)
         int iconSize = 10;
@@ -1006,7 +1060,11 @@ public:
                     int y = paletteY + row * cellSizeY;
                     juce::Rectangle<int> colorRect(x, y, cellSizeX, cellSizeY);
                     if (colorRect.contains(pos)) {
-                        return colors[row][col];
+                        // 벡터 범위 체크 강화
+                        if (row < (int)colors.size() && col < (int)colors[row].size()) {
+                            return colors[row][col];
+                        }
+                        return selectedColor;
                     }
                 }
             }
@@ -1040,8 +1098,11 @@ private:
             for (int col = 0; col < cols; ++col) {
                 int x = paletteX + col * cellSizeX;
                 int y = paletteY + row * cellSizeY;
-                g.setColour(colors[row][col]);
-                g.fillRect(x, y, cellSizeX, cellSizeY);
+                // 벡터 범위 체크 강화
+                if (row < (int)colors.size() && col < (int)colors[row].size()) {
+                    g.setColour(colors[row][col]);
+                    g.fillRect(x, y, cellSizeX, cellSizeY);
+                }
             }
         }
     }
@@ -1080,15 +1141,32 @@ public:
             bool isDarkMode = face ? face->isDarkMode() : false;
             juce::Drawable* arrowDrawable = isDarkMode ? arrowDrawableW : arrowDrawableB;
             
-            if (arrowDrawable) {
-                // SVG 화살표 그리기 (투명도 적용)
-                g.setOpacity(alpha);
-                // in 화살표 그리기
-                arrowDrawable->drawWithin(g, juce::Rectangle<float>(inX, arrowY, arrowSize, arrowSize), juce::RectanglePlacement::centred, alpha);
-                // out 화살표 그리기 (우측 정렬)
-                int outX = 152 - arrowSize - 1; // 오른쪽으로 1px 이동
-                arrowDrawable->drawWithin(g, juce::Rectangle<float>(outX, arrowY, arrowSize, arrowSize), juce::RectanglePlacement::centred, alpha);
-                g.setOpacity(1.0f);
+            if (arrowDrawable != nullptr) {
+                try {
+                    // SVG 화살표 그리기 (투명도 적용)
+                    g.setOpacity(alpha);
+                    // in 화살표 그리기
+                    arrowDrawable->drawWithin(g, juce::Rectangle<float>(inX, arrowY, arrowSize, arrowSize), juce::RectanglePlacement::centred, alpha);
+                    // out 화살표 그리기 (우측 정렬)
+                    int outX = 152 - arrowSize - 1; // 오른쪽으로 1px 이동
+                    arrowDrawable->drawWithin(g, juce::Rectangle<float>(outX, arrowY, arrowSize, arrowSize), juce::RectanglePlacement::centred, alpha);
+                    g.setOpacity(1.0f);
+                } catch (...) {
+                    // SVG 그리기 실패 시 기본 삼각형으로 대체
+                    juce::Logger::writeToLog("Warning: Failed to draw arrow SVG, using fallback");
+                    g.setOpacity(1.0f);
+                    juce::Colour arrowColor = isDarkMode ? juce::Colours::white : juce::Colours::black;
+                    g.setColour(arrowColor.withAlpha(alpha));
+                    // in 화살표 (간단한 삼각형)
+                    juce::Path arrowPath;
+                    arrowPath.addTriangle(inX, arrowY + 5, inX + 8, arrowY + 10, inX, arrowY + 15);
+                    g.fillPath(arrowPath);
+                    // out 화살표 (간단한 삼각형)
+                    int outX = 152 - arrowSize - 1; // 오른쪽으로 1px 이동
+                    juce::Path outArrowPath;
+                    outArrowPath.addTriangle(outX + 8, arrowY + 5, outX, arrowY + 10, outX + 8, arrowY + 15);
+                    g.fillPath(outArrowPath);
+                }
             } else {
                 // SVG 로드 실패 시 간단한 삼각형으로 대체
                 juce::Colour arrowColor = isDarkMode ? juce::Colours::white : juce::Colours::black;
@@ -1220,6 +1298,9 @@ public:
         colorPicker = std::make_unique<ColorPicker>();
         colorPicker->setPosition(juce::Point<int>(139, 253)); // 5px 아래로 이동
         
+        // AudioRecorder 초기화
+        audioRecorder = std::make_unique<AudioRecorder>();
+        
         loadClearVST3();
         setAudioChannels(2, 2);
         
@@ -1237,20 +1318,36 @@ public:
         setProcessor(clearPlugin.get());
         // 플러그인 에디터 생성 및 표시
         if (clearPlugin) {
-            pluginEditor.reset(clearPlugin->createEditor());
-            if (pluginEditor) {
-                pluginEditor->setOpaque(true); // 완전히 불투명하게
-                addAndMakeVisible(pluginEditor.get());
+            try {
+                pluginEditor.reset(clearPlugin->createEditor());
+                if (pluginEditor) {
+                    pluginEditor->setOpaque(true); // 완전히 불투명하게
+                    addAndMakeVisible(pluginEditor.get());
+                    juce::Logger::writeToLog("Plugin editor created successfully");
+                } else {
+                    juce::Logger::writeToLog("Warning: Failed to create plugin editor");
+                }
+            } catch (const std::exception& e) {
+                juce::Logger::writeToLog("Exception creating plugin editor: " + juce::String(e.what()));
+            } catch (...) {
+                juce::Logger::writeToLog("Unknown exception creating plugin editor");
             }
-            juce::Logger::writeToLog("Registering parameter listener...");
-            clearPlugin->addListener(this);
-            isAnimating = false;
-            startTimer(100); // 파라미터 동기화용
             
-            // LED 상태를 On으로 설정
-            if (pluginStatusLED) {
-                pluginStatusLED->setState(true);
-                juce::Logger::writeToLog("LED set to ON - plugin loaded successfully");
+            try {
+                juce::Logger::writeToLog("Registering parameter listener...");
+                clearPlugin->addListener(this);
+                isAnimating = false;
+                startTimer(100); // 파라미터 동기화용
+                
+                // LED 상태를 On으로 설정
+                if (pluginStatusLED) {
+                    pluginStatusLED->setState(true);
+                    juce::Logger::writeToLog("LED set to ON - plugin loaded successfully");
+                }
+            } catch (const std::exception& e) {
+                juce::Logger::writeToLog("Exception registering parameter listener: " + juce::String(e.what()));
+            } catch (...) {
+                juce::Logger::writeToLog("Unknown exception registering parameter listener");
             }
         } else {
             // 플러그인이 로드되지 않았으면 LED를 Off로 설정
@@ -1343,29 +1440,55 @@ public:
         audioRecorder = std::make_unique<AudioRecorder>();
     }
     ~ClearHostApp() override {
-        // 타이머 중지 (가장 먼저)
-        stopTimer();
-        
-        // 플러그인 리스너 제거 (플러그인이 아직 유효할 때)
-        if (clearPlugin) {
-            juce::Logger::writeToLog("Removing parameter listener...");
-            clearPlugin->removeListener(this);
-        }
-        
-        // 플러그인 에디터 정리
-        if (pluginEditor) {
-            pluginEditor.reset();
-        }
-        
-        // 플러그인 정리
-        if (clearPlugin) {
-            clearPlugin.reset();
-        }
-        
-        // MIDI 입력 정리
-        if (midiInput) {
-            midiInput->stop();
-            midiInput.reset();
+        try {
+            // 소멸 중 플래그 설정 (가장 먼저)
+            isBeingDeleted = true;
+            
+            // 타이머 중지
+            stopTimer();
+            
+            // 플러그인 리스너 해제 (JUCE 내부 문제로 인해 건너뜀)
+            if (clearPlugin) {
+                juce::Logger::writeToLog("Skipping parameter listener removal due to JUCE internal issues");
+            }
+            
+            // 플러그인 에디터 정리
+            if (pluginEditor) {
+                try {
+                    pluginEditor.reset();
+                } catch (const std::exception& e) {
+                    juce::Logger::writeToLog("Exception resetting plugin editor: " + juce::String(e.what()));
+                } catch (...) {
+                    juce::Logger::writeToLog("Unknown exception resetting plugin editor");
+                }
+            }
+            
+            // 플러그인 정리
+            if (clearPlugin) {
+                try {
+                    clearPlugin.reset();
+                } catch (const std::exception& e) {
+                    juce::Logger::writeToLog("Exception resetting plugin: " + juce::String(e.what()));
+                } catch (...) {
+                    juce::Logger::writeToLog("Unknown exception resetting plugin");
+                }
+            }
+            
+            // MIDI 입력 정리
+            if (midiInput) {
+                try {
+                    midiInput->stop();
+                    midiInput.reset();
+                } catch (const std::exception& e) {
+                    juce::Logger::writeToLog("Exception stopping MIDI input: " + juce::String(e.what()));
+                } catch (...) {
+                    juce::Logger::writeToLog("Unknown exception stopping MIDI input");
+                }
+            }
+        } catch (const std::exception& e) {
+            juce::Logger::writeToLog("Exception in destructor: " + juce::String(e.what()));
+        } catch (...) {
+            juce::Logger::writeToLog("Unknown exception in destructor");
         }
         
         // 벡터들 정리
@@ -1389,10 +1512,12 @@ public:
         logoDrawableW.reset();
         
         // 오디오 녹음 정리
-        if (audioRecorder && audioRecorder->isRecordingActive()) {
-            audioRecorder->stopRecording();
+        if (audioRecorder) {
+            if (audioRecorder->isRecordingActive()) {
+                audioRecorder->stopRecording();
+            }
+            audioRecorder.reset();
         }
-        audioRecorder.reset();
         
         // 컴포넌트들 정리
         controlPanel.reset();
@@ -1418,38 +1543,17 @@ public:
             juce::MidiBuffer midiMessages;
             clearPlugin->processBlock(*bufferToFill.buffer, midiMessages);
             
-            // 오디오 녹음 처리
+            // 오디오 녹음 처리 (녹음 중일 때만 최소한의 처리)
             if (audioRecorder && audioRecorder->isRecordingActive()) {
-                // 입력과 출력 데이터를 녹음기에 전달
-                const float* const* inputData = bufferToFill.buffer->getArrayOfReadPointers();
+                // 녹음 중일 때는 최소한의 처리만
                 const float* const* outputData = bufferToFill.buffer->getArrayOfReadPointers();
-                audioRecorder->processAudioData(inputData, bufferToFill.buffer->getNumChannels(),
-                                              outputData, bufferToFill.buffer->getNumChannels(),
-                                              bufferToFill.numSamples);
-            }
-            
-            // 디버깅: 오디오 레벨 확인
-            static int debugCounter = 0;
-            if (++debugCounter % 4410 == 0) { // 1초마다 한 번씩
-                float maxLevel = 0.0f;
-                for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ++ch) {
-                    auto* in = bufferToFill.buffer->getReadPointer(ch);
-                    for (int i = 0; i < bufferToFill.numSamples; ++i) {
-                        maxLevel = juce::jmax(maxLevel, std::abs(in[i]));
-                    }
-                }
-                if (maxLevel > 0.001f) {
-                    juce::Logger::writeToLog("Audio input detected! Max level: " + juce::String(maxLevel));
-                }
+                audioRecorder->processAudioData(nullptr, 0, outputData, bufferToFill.buffer->getNumChannels(), bufferToFill.numSamples);
             }
         } else {
-            for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ++ch) {
-                auto* in = bufferToFill.buffer->getReadPointer(ch);
-                auto* out = bufferToFill.buffer->getWritePointer(ch);
-                if (ch < bufferToFill.buffer->getNumChannels())
-                    juce::FloatVectorOperations::copy(out, in, bufferToFill.numSamples);
-                else
-                    juce::FloatVectorOperations::clear(out, bufferToFill.numSamples);
+            // 플러그인이 없을 때는 무음
+            for (int channel = 0; channel < bufferToFill.buffer->getNumChannels(); ++channel) {
+                float* channelData = bufferToFill.buffer->getWritePointer(channel);
+                juce::FloatVectorOperations::clear(channelData, bufferToFill.numSamples);
             }
         }
     }
@@ -1457,170 +1561,45 @@ public:
         if (clearPlugin) clearPlugin->releaseResources();
     }
     void handleIncomingMidiMessage(juce::MidiInput*, const juce::MidiMessage& message) override {
+        // 소멸 중이면 콜백 무시
+        if (isBeingDeleted) return;
+        
         if (message.isController() && clearPlugin) mapMidiCCToClearParameter(message);
     }
     void paint(juce::Graphics& g) override {
-        auto bounds = getLocalBounds();
-        int w = bounds.getWidth();
-        int h = bounds.getHeight();
-        int col1 = 160; // 1번 캔버스 가로를 160px로 고정
-        int col3 = w - col1; // 3번 캔버스 (나머지 공간)
-        // 플러그인 관련 멤버 접근 전 nullptr/size 체크
-        if (knobRects.size() < 3 || knobValues.size() < 3) {
-            juce::Logger::writeToLog("paint: knobRects/knobValues size error");
+        // Clear 플러그인 창이 최대화되지 않았을 때는 최소한의 렌더링만
+        if (clearPluginEditor && !clearPluginEditor->isVisible()) {
+            // 플러그인 창이 보이지 않으면 배경만 그리기
+            g.fillAll(juce::Colour(0xFF2D2D2D));
             return;
         }
-        // 1단: 검정색 배경
-        juce::Rectangle<int> leftArea(0, 0, col1, h);
-        g.setColour(juce::Colours::black);
-        g.fillRect(leftArea);
-        // Face 그리기 (좌상단 0,0에서 160x280)
-        if (face) {
-            face->draw(g);
+        
+        // 기존 렌더링 로직
+        g.fillAll(juce::Colour(0xFF2D2D2D));
+        
+        // SVG 로고 그리기
+        if (svgLogo) {
+            g.setColour(juce::Colours::white);
+            svgLogo->draw(g, juce::Rectangle<float>(10, 10, 30, 30));
         }
         
-        // 로고 그리기 (Face 바로 위, Panel 아래)
-        drawLogo(g, face->getTextColor());
-        // Panel 그리기 (노브 3개 + LED + Stereo 토글) - 1번 캔버스로 이동
-        juce::Point<int> panelCenter(80, 78); // 노브2(voice) 중앙을 x=80px, y=78px에 위치 (5px 아래로 이동)
-        if (controlPanel) {
-            // Stereo/Mono 버튼 텍스트 업데이트
-            juce::String stereoText = "stereo";
-            if (clearPlugin) {
-                auto params = clearPlugin->getParameters();
-                if (params.size() > 13 && params[13] && params[13]->getValue() < 0.5f)
-                    stereoText = "mono";
-            }
-            controlPanel->updateStereoText(stereoText);
+        // 노브 값 표시
+        if (knobDisplayState == KnobDisplayState::Values) {
+            g.setColour(juce::Colours::white);
+            g.setFont(juce::Font("EuclidCircularB-Regular", 12.0f, juce::Font::plain));
             
-            controlPanel->center = panelCenter;
-            controlPanel->draw(g, currentMousePos);
-        }
-        
-        // Bottom 그리기 (화살표 Drawable 전달)
-        if (bottom) {
-            bottom->draw(g, arrowDrawableB.get(), arrowDrawableW.get(), face.get());
-        }
-        
-        // ColorPicker 그리기
-        if (colorPicker && face) {
-            colorPicker->draw(g, face->getTextColor());
-        }
-        
-        // 입력 드롭다운이 열려있으면 장치 리스트 표시 (in 버튼 바로 아래)
-        if (inputDropdownOpen) {
-            // bypass 상태에 따른 알파값 설정 (Panel과 동일하게)
-            float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
-            
-            int inButtonY = 121 + 4 + 23 - 10 - 8 - 2; // 5px 아래로 이동
-            int dropdownY = inButtonY + 21;
-            int dropdownHeight = std::min(MAX_VISIBLE_ITEMS * ITEM_HEIGHT, (int)inputDeviceList.size() * ITEM_HEIGHT);
-            inputDropdownRect = juce::Rectangle<int>(10, dropdownY, 140, dropdownHeight);
-            
-            inputDeviceRects.clear();
-            int visibleCount = std::min(MAX_VISIBLE_ITEMS, (int)inputDeviceList.size() - inputScrollOffset);
-            
-            for (int i = 0; i < visibleCount; ++i) {
-                int actualIndex = i + inputScrollOffset;
-                juce::Rectangle<int> itemRect(inputDropdownRect.getX(), inputDropdownRect.getY() + i * ITEM_HEIGHT, inputDropdownRect.getWidth(), ITEM_HEIGHT);
-                inputDeviceRects.push_back(itemRect);
-                
-                // 현재 선택된 장치인지 확인
-                bool isSelected = (inputDeviceList[actualIndex] == currentInputDevice);
-                
-                // bypass 상태에 따른 알파값 적용
-                g.setColour(face->getTextColor().withAlpha(alpha));
-                g.drawText(inputDeviceList[actualIndex].toLowerCase(), itemRect, juce::Justification::centredLeft);
-                
-                // 현재 선택된 장치에 언더라인 그리기
-                if (isSelected) {
-                    // 현재 설정된 폰트 사용 (텍스트 그리기와 동일한 폰트)
-                    int textWidth = g.getCurrentFont().getStringWidth(inputDeviceList[actualIndex].toLowerCase());
-                    int underlineY = itemRect.getY() + 15; // 텍스트 아래 3px (1px 아래로 이동)
-                    int underlineX = itemRect.getX(); // 오른쪽으로 1px 이동 (-1px -> 0px)
-                    g.setColour(face->getTextColor().withAlpha(alpha));
-                    g.drawLine(underlineX, underlineY, underlineX + textWidth, underlineY, 1.0f);
-                }
+            for (int i = 0; i < 3; ++i) {
+                juce::String valueText = juce::String(knobValues[i], 2);
+                g.drawText(valueText, knobValueAreas[i], juce::Justification::centred);
             }
         }
         
-        // 출력 드롭다운이 열려있으면 장치 리스트 표시 (out 버튼 바로 아래)
-        if (outputDropdownOpen) {
-            // bypass 상태에 따른 알파값 설정 (Panel과 동일하게)
-            float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
-            
-            // out 버튼 바로 아래 위치 계산 (Bottom 클래스의 out 버튼 위치 참조)
-            int outButtonY = 121 + 4 + 23 - 10 - 8 - 2; // Bottom 클래스의 실제 out 버튼 Y 위치 (5px 아래로 이동)
-            int dropdownY = outButtonY + 21; // out 버튼 바로 아래 20px + 2px - 1px (위로 1px 이동)
-            
-            // 드롭다운 높이를 최대 5개 아이템으로 제한
-            int dropdownHeight = std::min(MAX_VISIBLE_ITEMS * ITEM_HEIGHT, (int)outputDeviceList.size() * ITEM_HEIGHT);
-            outputDropdownRect = juce::Rectangle<int>(10, dropdownY, 140, dropdownHeight);
-            
-            outputDeviceRects.clear();
-            int visibleCount = std::min(MAX_VISIBLE_ITEMS, (int)outputDeviceList.size() - outputScrollOffset);
-            
-            for (int i = 0; i < visibleCount; ++i) {
-                int actualIndex = i + outputScrollOffset;
-                juce::Rectangle<int> itemRect(outputDropdownRect.getX(), outputDropdownRect.getY() + i * ITEM_HEIGHT, outputDropdownRect.getWidth(), ITEM_HEIGHT);
-                outputDeviceRects.push_back(itemRect);
-                
-                // 현재 선택된 장치인지 확인
-                bool isSelected = (outputDeviceList[actualIndex] == currentOutputDevice);
-                
-                // bypass 상태에 따른 알파값 적용
-                g.setColour(face->getTextColor().withAlpha(alpha));
-                g.drawText(outputDeviceList[actualIndex].toLowerCase(), itemRect, juce::Justification::centredRight);
-                
-                // 현재 선택된 장치에 언더라인 그리기
-                if (isSelected) {
-                    // 현재 설정된 폰트 사용 (텍스트 그리기와 동일한 폰트)
-                    int textWidth = g.getCurrentFont().getStringWidth(outputDeviceList[actualIndex].toLowerCase());
-                    int underlineY = itemRect.getY() + 15; // 텍스트 아래 3px (1px 아래로 이동)
-                    int underlineX = itemRect.getX() + itemRect.getWidth() - textWidth; // 왼쪽으로 1px 이동 (+1px -> 0px)
-                    g.setColour(face->getTextColor().withAlpha(alpha));
-                    g.drawLine(underlineX, underlineY, underlineX + textWidth, underlineY, 1.0f);
-                }
+        // 애니메이션 중일 때는 애니메이션 효과 그리기
+        if (isAnimating) {
+            g.setColour(juce::Colours::yellow.withAlpha(0.3f));
+            for (int i = 0; i < 3; ++i) {
+                g.fillEllipse(knobValueAreas[i].toFloat());
             }
-        }
-        
-        // preset 드롭다운이 열려있으면 프리셋 리스트 표시 (preset 버튼 바로 아래, 중앙 정렬)
-        if (presetDropdownOpen) {
-            // bypass 상태에 따른 알파값 설정 (Panel과 동일하게)
-            float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
-            
-            int presetButtonY = 121 + 4 + 23 - 10 - 8 - 2; // 5px 아래로 이동
-            int dropdownY = presetButtonY + 21;
-            int dropdownHeight = std::min(MAX_VISIBLE_ITEMS * ITEM_HEIGHT, (int)presetList.size() * ITEM_HEIGHT);
-            int dropdownWidth = 140;
-            int dropdownX = 80 - dropdownWidth / 2; // 중앙 80px 기준으로 정렬
-            presetDropdownRect = juce::Rectangle<int>(dropdownX, dropdownY, dropdownWidth, dropdownHeight);
-            drawDropdownList(g, presetList, currentPreset, presetDropdownRect, presetScrollOffset, MAX_VISIBLE_ITEMS, ITEM_HEIGHT, presetRects, juce::Justification::centred, 0, alpha, face->getTextColor());
-        }
-        
-        // 3번 캔버스: 배경만 그리기 (불필요한 텍스트, 회색 배경 등 완전 제거)
-        juce::Rectangle<int> rightArea(col1, 0, getWidth() - col1, getHeight());
-        g.setColour(juce::Colours::black);
-        g.fillRect(rightArea);
-        // 플러그인 에디터는 addAndMakeVisible로 바로 올림 (paint에서 텍스트 등 제거)
-        if (pluginEditor) {
-            // 플러그인 에디터의 실제 크기 가져오기
-            auto editorBounds = pluginEditor->getBounds();
-            int actualEditorWidth = editorBounds.getWidth();
-            int actualEditorHeight = editorBounds.getHeight();
-            
-            // 고정 좌표 설정 (오른쪽 크롭 방지)
-            pluginEditor->setBounds(160, 0, actualEditorWidth, actualEditorHeight);
-        }
-        
-        // ColorPicker 팔레트 위치 동적 지정 (bottom 하단에 맞춤)
-        if (colorPicker) {
-            constexpr int bottomY = 230; // Face 내부 bottom 시작 y (예시)
-            constexpr int bottomHeight = 40; // bottom 높이 (예시)
-            constexpr int paletteH = ColorPicker::paletteH;
-            int paletteY = bottomY + bottomHeight - paletteH;
-            colorPicker->setPaletteY(paletteY);
-            colorPicker->draw(g);
         }
     }
     void resized() override {
@@ -1667,34 +1646,36 @@ public:
     }
     
     void audioProcessorParameterChanged(juce::AudioProcessor*, int parameterIndex, float newValue) override {
-        juce::Logger::writeToLog("audioProcessorParameterChanged: enter idx=" + juce::String(parameterIndex));
-        if (!clearPlugin) return;
-        auto params = clearPlugin->getParameters();
+        // 소멸 중이면 콜백 무시
+        if (isBeingDeleted) return;
         
-        int knobIndex = -1;
-        if (parameterIndex == 1 && params.size() > 1 && params[1]) {
-            knobIndex = 0;
+        // knobValues 벡터 크기 체크
+        if (knobValues.size() < 3) {
+            juce::Logger::writeToLog("audioProcessorParameterChanged: knobValues size too small: " + juce::String(knobValues.size()));
+            return;
+        }
+        
+        // 파라미터 인덱스에 따른 노브 업데이트
+        if (parameterIndex == 1 && knobValues.size() > 0) {
             knobValues[0] = newValue * 2.0f; // 0~1을 0~2로 변환
+            updateKnobDisplayState(0, knobValues[0]);
         }
-        else if (parameterIndex == 14 && params.size() > 14 && params[14]) {
-            knobIndex = 1;
+        else if (parameterIndex == 14 && knobValues.size() > 1) {
             knobValues[1] = newValue * 2.0f; // 0~1을 0~2로 변환
+            updateKnobDisplayState(1, knobValues[1]);
         }
-        else if (parameterIndex == 12 && params.size() > 12 && params[12]) {
-            knobIndex = 2;
+        else if (parameterIndex == 12 && knobValues.size() > 2) {
             knobValues[2] = newValue * 2.0f; // 0~1을 0~2로 변환
-        }
-        
-        // 노브 값이 변경되었으면 표시 상태 업데이트
-        if (knobIndex >= 0) {
-            updateKnobDisplayState(knobIndex, knobValues[knobIndex]);
+            updateKnobDisplayState(2, knobValues[2]);
         }
         
         repaint();
-        juce::Logger::writeToLog("audioProcessorParameterChanged: exit idx=" + juce::String(parameterIndex));
     }
     
     void audioProcessorChanged(juce::AudioProcessor*, const juce::AudioProcessorListener::ChangeDetails&) override {
+        // 소멸 중이면 콜백 무시
+        if (isBeingDeleted) return;
+        
         // 플러그인이 변경되면 노브 업데이트
         updateKnobsFromPlugin();
     }
@@ -1761,16 +1742,20 @@ public:
             // Stereo/Mono 토글
             if (clearPlugin) {
                 auto params = clearPlugin->getParameters();
-                if (params.size() > 13 && params[13]) {
-                    float currentValue = params[13]->getValue();
-                    float newValue = (currentValue > 0.5f) ? 0.0f : 1.0f; // 토글
-                    params[13]->setValueNotifyingHost(newValue);
-                    
-                    // 버튼 텍스트 업데이트
-                    juce::String buttonText = (newValue > 0.5f) ? "Stereo" : "Mono";
-                    stereoMonoButton->setButtonText(buttonText);
-                    
-                    juce::Logger::writeToLog("Toggled Stereo/Mono to: " + buttonText + " (value: " + juce::String(newValue) + ")");
+                if (params.size() > 13 && params[13] != nullptr) {
+                    try {
+                        float currentValue = params[13]->getValue();
+                        float newValue = (currentValue > 0.5f) ? 0.0f : 1.0f; // 토글
+                        params[13]->setValueNotifyingHost(newValue);
+                        
+                        // 버튼 텍스트 업데이트
+                        juce::String buttonText = (newValue > 0.5f) ? "Stereo" : "Mono";
+                        stereoMonoButton->setButtonText(buttonText);
+                        
+                        juce::Logger::writeToLog("Toggled Stereo/Mono to: " + buttonText + " (value: " + juce::String(newValue) + ")");
+                    } catch (...) {
+                        juce::Logger::writeToLog("Warning: Failed to toggle Stereo/Mono parameter");
+                    }
                 }
             }
         }
@@ -1831,6 +1816,19 @@ public:
     
     void timerCallback() override {
         static bool firstRun = true;
+        static int retryCount = 0;
+        const int MAX_RETRY_COUNT = 10;
+        
+        // Clear 플러그인 창이 최대화되지 않았을 때는 최소한의 타이머 처리만
+        if (clearPluginEditor && !clearPluginEditor->isVisible()) {
+            // 기본 창 모드에서는 Rec 버튼 깜빡임만 처리
+            if (controlPanel && controlPanel->isRecButtonActive()) {
+                startTimer(100); // 10fps로 깜빡임 업데이트
+            } else {
+                stopTimer();
+            }
+            return;
+        }
         
         if (firstRun) {
             // 첫 실행 시 저장된 장치 설정 적용
@@ -1850,14 +1848,15 @@ public:
             double easedProgress = 1.0 - std::pow(1.0 - progress, 3.0);
             for (int i = 0; i < 3; ++i) {
                 double currentValue = animationStartValues[i] + (animationTargetValues[i] - animationStartValues[i]) * easedProgress;
-                setKnobValue(i, currentValue);
+                knobValues[i] = static_cast<float>(currentValue);
             }
             repaint();
+            
             if (progress >= 1.0) {
                 isAnimating = false;
                 // Rec 버튼이 활성화되어 있으면 타이머 계속 실행, 아니면 정지
                 if (controlPanel && controlPanel->isRecButtonActive()) {
-                    startTimer(16); // 60fps로 깜빡임 업데이트
+                    startTimer(100); // 10fps로 깜빡임 업데이트 (20fps에서 10fps로 변경)
                 } else {
                     stopTimer();
                     juce::Logger::writeToLog("Animation completed");
@@ -1872,21 +1871,28 @@ public:
             
             // Rec 버튼이 활성화되어 있으면 타이머 계속 실행, 아니면 정지
             if (controlPanel && controlPanel->isRecButtonActive()) {
-                startTimer(16); // 60fps로 깜빡임 업데이트
+                startTimer(100); // 10fps로 깜빡임 업데이트 (20fps에서 10fps로 변경)
             } else {
                 stopTimer();
                 
-                // 기존의 파라미터 동기화 로직
-                juce::Logger::writeToLog("timerCallback: updateKnobsFromPlugin() 시도");
-                if (!clearPlugin) return;
-                auto params = clearPlugin->getParameters();
-                if (params.size() > 1 && params[1] && params[1]->getName(100).isNotEmpty()) {
-                    juce::Logger::writeToLog("timerCallback: 파라미터 접근 OK");
-                    updateKnobsFromPlugin();
-                } else {
-                    juce::Logger::writeToLog("timerCallback: 파라미터 접근 불가, 재시도");
-                    startTimer(100);
+                // 기존의 파라미터 동기화 로직 (릴리즈 모드에서만)
+                #ifdef JUCE_DEBUG
+                // 디버그 모드에서는 로그 제거
+                #else
+                // 릴리즈 모드에서만 100번에 한 번씩 로그
+                static int logCounter = 0;
+                logCounter++;
+                if (logCounter >= 100) {
+                    logCounter = 0;
+                    if (!clearPlugin) return;
+                    auto params = clearPlugin->getParameters();
+                    if (params.size() > 1 && params[1] && params[1]->getName(100).isNotEmpty()) {
+                        // 최종 값만 확인
+                        juce::Logger::writeToLog("Final knob values: " + juce::String(knobValues[0], 2) + ", " + 
+                                               juce::String(knobValues[1], 2) + ", " + juce::String(knobValues[2], 2));
+                    }
                 }
+                #endif
             }
         }
     }
@@ -1894,31 +1900,54 @@ public:
     void updateKnobsFromPlugin() {
         if (!clearPlugin) return;
         auto params = clearPlugin->getParameters();
-        juce::Logger::writeToLog("updateKnobsFromPlugin: params.size()=" + juce::String(params.size()));
-        if (params.size() > 1) {
-            juce::Logger::writeToLog("param[1] ptr=" + juce::String((uint64_t)params[1]));
-            if (params[1]) {
-                juce::Logger::writeToLog("param[1] getValue() before");
+        
+        // knobValues 벡터 크기 체크
+        if (knobValues.size() < 3) {
+            return;
+        }
+        
+        if (params.size() > 1 && params[1] != nullptr) {
+            try {
                 knobValues[0] = params[1]->getValue() * 2.0f; // 0~1을 0~2로 변환
-                juce::Logger::writeToLog("param[1] getValue() after: " + juce::String(knobValues[0]));
+            } catch (const std::exception& e) {
+                // 예외 발생 시 기본값 유지
+            } catch (...) {
+                // 예외 발생 시 기본값 유지
             }
         }
-        if (params.size() > 14) {
-            juce::Logger::writeToLog("param[14] ptr=" + juce::String((uint64_t)params[14]));
-            if (params[14]) {
-                juce::Logger::writeToLog("param[14] getValue() before");
+        if (params.size() > 14 && params[14] != nullptr) {
+            try {
                 knobValues[1] = params[14]->getValue() * 2.0f; // 0~1을 0~2로 변환
-                juce::Logger::writeToLog("param[14] getValue() after: " + juce::String(knobValues[1]));
+            } catch (const std::exception& e) {
+                // 예외 발생 시 기본값 유지
+            } catch (...) {
+                // 예외 발생 시 기본값 유지
             }
         }
-        if (params.size() > 12) {
-            juce::Logger::writeToLog("param[12] ptr=" + juce::String((uint64_t)params[12]));
-            if (params[12]) {
-                juce::Logger::writeToLog("param[12] getValue() before");
+        if (params.size() > 12 && params[12] != nullptr) {
+            try {
                 knobValues[2] = params[12]->getValue() * 2.0f; // 0~1을 0~2로 변환
-                juce::Logger::writeToLog("param[12] getValue() after: " + juce::String(knobValues[2]));
+            } catch (const std::exception& e) {
+                // 예외 발생 시 기본값 유지
+            } catch (...) {
+                // 예외 발생 시 기본값 유지
             }
         }
+        
+        // 릴리즈 모드에서만 최종 값 확인 (디버그용)
+        #if JUCE_DEBUG
+        // 디버그 모드에서는 아무것도 하지 않음
+        #else
+        // 릴리즈 모드에서만 최종 값 로그 (선택적)
+        static int logCounter = 0;
+        if (++logCounter % 100 == 0) { // 100번에 한 번씩만 로그
+            juce::Logger::writeToLog("Knob values updated - Final: " + 
+                                   juce::String(knobValues[0]) + ", " + 
+                                   juce::String(knobValues[1]) + ", " + 
+                                   juce::String(knobValues[2]));
+        }
+        #endif
+        
         repaint();
     }
     
@@ -2184,31 +2213,16 @@ public:
     }
 
     void mouseDown(const juce::MouseEvent& event) override {
-        auto pos = event.getPosition();
-        
-        // 노브 더블클릭 처리 (1.0으로 리셋 - 중간값)
-        if (event.getNumberOfClicks() >= 2) {
-            for (int i = 0; i < knobRects.size(); ++i) {
-                if (knobRects[i].contains(pos)) {
-                    knobValues[i] = 1.0f; // 0~2 범위에서 중간값
-                    // 파라미터 반영
-                    if (clearPlugin) {
-                        auto params = clearPlugin->getParameters();
-                        int targetParamIndex = -1;
-                        switch (i) {
-                            case 0: targetParamIndex = 1; break;
-                            case 1: targetParamIndex = 14; break;
-                            case 2: targetParamIndex = 12; break;
-                        }
-                        if (targetParamIndex >= 0 && targetParamIndex < params.size() && params[targetParamIndex]) {
-                            params[targetParamIndex]->setValueNotifyingHost(0.5f); // 0~1 범위에서 중간값
-                        }
-                    }
-                    repaint();
-                    return;
-                }
-            }
+        // Clear 플러그인 창이 최대화되지 않았을 때는 최소한의 마우스 처리만
+        if (clearPluginEditor && !clearPluginEditor->isVisible()) {
+            // 기본 창 모드에서는 최소한의 처리만
+            return;
         }
+        
+        currentMousePos = event.position;
+        
+        // 기존 마우스 처리 로직
+        auto pos = event.position;
         
         // Panel의 LED 클릭 처리 (테스트용)
         if (controlPanel && controlPanel->hitTestLED(pos)) {
@@ -2222,14 +2236,14 @@ public:
                 if (audioRecorder) {
                     audioRecorder->startRecording();
                 }
-                startTimer(16); // 60fps 타이머 시작
+                startTimer(100); // 10fps로 변경 (60fps에서 10fps로)
             } else {
                 // Rec 버튼이 비활성화되면 녹음 중지
                 if (audioRecorder && audioRecorder->isRecordingActive()) {
                     audioRecorder->stopRecording();
                 }
+                stopTimer();
             }
-            
             repaint();
             return;
         }
@@ -2244,7 +2258,7 @@ public:
                 if (audioRecorder) {
                     audioRecorder->startRecording();
                 }
-                startTimer(16); // 60fps 타이머 시작
+                startTimer(100); // 10fps로 변경 (60fps에서 10fps로)
             } else {
                 // Rec 버튼이 비활성화되면 녹음 중지
                 if (audioRecorder && audioRecorder->isRecordingActive()) {
@@ -2976,47 +2990,84 @@ private:
     // 오디오 녹음 기능
     std::unique_ptr<AudioRecorder> audioRecorder;
     
+    // 소멸 중 플래그 (콜백 안전성 보장)
+    bool isBeingDeleted = false;
+    
     // MainWindow에서 접근할 수 있도록 friend 클래스 선언
     friend class MainWindow;
     
     void loadArrowSVGs() {
-        // 화살표 SVG 파일들 로드 - 실행 파일 위치 기준으로 Resources 디렉토리 찾기
-        juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
-        juce::File resourcesDir = execFile.getParentDirectory().getParentDirectory().getChildFile("Resources");
+        // 화살표 SVG 파일들 로드 - main.cpp 기준으로 Resources 디렉토리 찾기
+        juce::File currentDir = juce::File::getCurrentWorkingDirectory();
+        juce::File resourcesDir = currentDir.getChildFile("Resources");
         juce::File arrowBFile = resourcesDir.getChildFile("arrow_b.svg");
         juce::File arrowWFile = resourcesDir.getChildFile("arrow_w.svg");
         
+        // 첫 번째 시도: 현재 작업 디렉토리의 Resources
         if (arrowBFile.existsAsFile()) {
             arrowDrawableB = juce::Drawable::createFromSVGFile(arrowBFile);
             juce::Logger::writeToLog("Arrow SVG loaded successfully from: " + arrowBFile.getFullPathName());
         } else {
-            juce::Logger::writeToLog("Arrow SVG file not found: " + arrowBFile.getFullPathName());
+            // 두 번째 시도: 실행 파일 위치의 Resources
+            juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+            juce::File execResourcesDir = execFile.getParentDirectory().getChildFile("Resources");
+            juce::File execArrowBFile = execResourcesDir.getChildFile("arrow_b.svg");
+            
+            if (execArrowBFile.existsAsFile()) {
+                arrowDrawableB = juce::Drawable::createFromSVGFile(execArrowBFile);
+                juce::Logger::writeToLog("Arrow SVG loaded successfully from: " + execArrowBFile.getFullPathName());
+            } else {
+                juce::Logger::writeToLog("Arrow SVG file not found in both locations: " + arrowBFile.getFullPathName() + " and " + execArrowBFile.getFullPathName());
+            }
         }
         
         if (arrowWFile.existsAsFile()) {
             arrowDrawableW = juce::Drawable::createFromSVGFile(arrowWFile);
             juce::Logger::writeToLog("Arrow SVG loaded successfully from: " + arrowWFile.getFullPathName());
         } else {
-            juce::Logger::writeToLog("Arrow SVG file not found: " + arrowWFile.getFullPathName());
+            // 두 번째 시도: 실행 파일 위치의 Resources
+            juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+            juce::File execResourcesDir = execFile.getParentDirectory().getChildFile("Resources");
+            juce::File execArrowWFile = execResourcesDir.getChildFile("arrow_w.svg");
+            
+            if (execArrowWFile.existsAsFile()) {
+                arrowDrawableW = juce::Drawable::createFromSVGFile(execArrowWFile);
+                juce::Logger::writeToLog("Arrow SVG loaded successfully from: " + execArrowWFile.getFullPathName());
+            } else {
+                juce::Logger::writeToLog("Arrow SVG file not found in both locations: " + arrowWFile.getFullPathName() + " and " + execArrowWFile.getFullPathName());
+            }
         }
     }
     
     void loadLogoSVGs() {
         if (logoSVGsLoaded) return;
         
-        // 로고 SVG 파일들 로드 - 실행 파일 위치 기준으로 Resources 디렉토리 찾기
-        juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
-        juce::File resourcesDir = execFile.getParentDirectory().getParentDirectory().getChildFile("Resources");
+        // 로고 SVG 파일들 로드 - main.cpp 기준으로 Resources 디렉토리 찾기
+        juce::File currentDir = juce::File::getCurrentWorkingDirectory();
+        juce::File resourcesDir = currentDir.getChildFile("Resources");
         juce::File logoBFile = resourcesDir.getChildFile("symbol_b.svg");
         juce::File logoWFile = resourcesDir.getChildFile("symbol_w.svg");
         
+        // 첫 번째 시도: 현재 작업 디렉토리의 Resources
         if (logoBFile.existsAsFile()) {
             logoDrawableB = juce::Drawable::createFromSVGFile(logoBFile);
             if (logoDrawableB) {
                 juce::Logger::writeToLog("SVG logo loaded successfully from: " + logoBFile.getFullPathName());
             }
         } else {
-            juce::Logger::writeToLog("Logo SVG file not found: " + logoBFile.getFullPathName());
+            // 두 번째 시도: 실행 파일 위치의 Resources
+            juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+            juce::File execResourcesDir = execFile.getParentDirectory().getChildFile("Resources");
+            juce::File execLogoBFile = execResourcesDir.getChildFile("symbol_b.svg");
+            
+            if (execLogoBFile.existsAsFile()) {
+                logoDrawableB = juce::Drawable::createFromSVGFile(execLogoBFile);
+                if (logoDrawableB) {
+                    juce::Logger::writeToLog("SVG logo loaded successfully from: " + execLogoBFile.getFullPathName());
+                }
+            } else {
+                juce::Logger::writeToLog("Logo SVG file not found in both locations: " + logoBFile.getFullPathName() + " and " + execLogoBFile.getFullPathName());
+            }
         }
         
         if (logoWFile.existsAsFile()) {
@@ -3025,104 +3076,139 @@ private:
                 juce::Logger::writeToLog("SVG logo loaded successfully from: " + logoWFile.getFullPathName());
             }
         } else {
-            juce::Logger::writeToLog("Logo SVG file not found: " + logoWFile.getFullPathName());
+            // 두 번째 시도: 실행 파일 위치의 Resources
+            juce::File execFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+            juce::File execResourcesDir = execFile.getParentDirectory().getChildFile("Resources");
+            juce::File execLogoWFile = execResourcesDir.getChildFile("symbol_w.svg");
+            
+            if (execLogoWFile.existsAsFile()) {
+                logoDrawableW = juce::Drawable::createFromSVGFile(execLogoWFile);
+                if (logoDrawableW) {
+                    juce::Logger::writeToLog("SVG logo loaded successfully from: " + execLogoWFile.getFullPathName());
+                }
+            } else {
+                juce::Logger::writeToLog("Logo SVG file not found in both locations: " + logoWFile.getFullPathName() + " and " + execLogoWFile.getFullPathName());
+            }
         }
         
         logoSVGsLoaded = true;
     }
     
     void loadClearVST3() {
-        // VST3를 우선적으로 시도 (권한 문제 해결 후)
-        juce::Logger::writeToLog("Trying to load Clear as VST3 (with permission fix)...");
-        
-        juce::File vst3Dir("/Library/Audio/Plug-Ins/VST3");
-        juce::File clearVST3 = vst3Dir.getChildFile("Clear.vst3");
-        if (clearVST3.exists()) {
-            juce::Logger::writeToLog("Found Clear VST3: " + clearVST3.getFullPathName());
-            juce::AudioPluginFormat* vst3Format = nullptr;
-            for (int i = 0; i < pluginManager.getNumFormats(); ++i) {
-                auto* format = pluginManager.getFormat(i);
-                if (format && format->getName().contains("VST3")) {
-                    vst3Format = format;
-                    juce::Logger::writeToLog("Found VST3 format at index " + juce::String(i));
-                    break;
-                }
-            }
-            if (vst3Format) {
-                juce::PluginDescription desc;
-                desc.fileOrIdentifier = clearVST3.getFullPathName();
-                desc.pluginFormatName = "VST3";
-                desc.name = "Clear";
-                desc.descriptiveName = "Clear";
-                desc.manufacturerName = "Clear";
-                desc.category = "Effect";
-                desc.isInstrument = false;
-                
-                juce::String errorMessage;
-                clearPlugin = vst3Format->createInstanceFromDescription(desc, 44100.0, 512, errorMessage);
-                if (clearPlugin) {
-                    juce::Logger::writeToLog("Clear VST3 loaded successfully!");
-                    setPluginLoaded(true);
-                    
-                    // 앱 실행 시 stereo/mono 파라미터를 stereo로 설정
-                    auto params = clearPlugin->getParameters();
-                    if (params.size() > 13 && params[13]) {
-                        params[13]->setValueNotifyingHost(1.0f); // stereo로 설정
-                        juce::Logger::writeToLog("Set stereo/mono parameter to stereo (VST3)");
+        try {
+            // VST3를 우선적으로 시도 (권한 문제 해결 후)
+            juce::Logger::writeToLog("Trying to load Clear as VST3 (with permission fix)...");
+            
+            juce::File vst3Dir("/Library/Audio/Plug-Ins/VST3");
+            juce::File clearVST3 = vst3Dir.getChildFile("Clear.vst3");
+            if (clearVST3.exists()) {
+                juce::Logger::writeToLog("Found Clear VST3: " + clearVST3.getFullPathName());
+                juce::AudioPluginFormat* vst3Format = nullptr;
+                for (int i = 0; i < pluginManager.getNumFormats(); ++i) {
+                    auto* format = pluginManager.getFormat(i);
+                    if (format && format->getName().contains("VST3")) {
+                        vst3Format = format;
+                        juce::Logger::writeToLog("Found VST3 format at index " + juce::String(i));
+                        break;
                     }
-                } else {
-                    juce::Logger::writeToLog("Failed to load Clear VST3: " + errorMessage);
-                    setPluginLoaded(false);
+                }
+                if (vst3Format) {
+                    juce::PluginDescription desc;
+                    desc.fileOrIdentifier = clearVST3.getFullPathName();
+                    desc.pluginFormatName = "VST3";
+                    desc.name = "Clear";
+                    desc.descriptiveName = "Clear";
+                    desc.manufacturerName = "Clear";
+                    desc.category = "Effect";
+                    desc.isInstrument = false;
                     
-                    // VST3 실패시 AU로 폴백
-                    juce::Logger::writeToLog("Falling back to AudioUnit...");
-                    juce::File auDir("/Library/Audio/Plug-Ins/Components");
-                    juce::File clearAU = auDir.getChildFile("Clear.component");
-                    if (clearAU.exists()) {
-                        juce::Logger::writeToLog("Found Clear AU: " + clearAU.getFullPathName());
-                        juce::AudioPluginFormat* auFormat = nullptr;
-                        for (int i = 0; i < pluginManager.getNumFormats(); ++i) {
-                            auto* format = pluginManager.getFormat(i);
-                            if (format && format->getName().contains("AudioUnit")) {
-                                auFormat = format;
-                                juce::Logger::writeToLog("Found AudioUnit format at index " + juce::String(i));
-                                break;
+                    juce::String errorMessage;
+                    clearPlugin = vst3Format->createInstanceFromDescription(desc, 44100.0, 512, errorMessage);
+                    if (clearPlugin) {
+                        juce::Logger::writeToLog("Clear VST3 loaded successfully!");
+                        setPluginLoaded(true);
+                        
+                        // 앱 실행 시 stereo/mono 파라미터를 stereo로 설정
+                        try {
+                            auto params = clearPlugin->getParameters();
+                            if (params.size() > 13 && params[13] != nullptr) {
+                                params[13]->setValueNotifyingHost(1.0f); // stereo로 설정
+                                juce::Logger::writeToLog("Set stereo/mono parameter to stereo (VST3)");
                             }
+                        } catch (...) {
+                            juce::Logger::writeToLog("Warning: Failed to set stereo/mono parameter (VST3)");
                         }
-                        if (auFormat) {
-                            juce::PluginDescription auDesc;
-                            auDesc.fileOrIdentifier = clearAU.getFullPathName();
-                            auDesc.pluginFormatName = "AudioUnit";
-                            auDesc.name = "Clear";
-                            auDesc.descriptiveName = "Clear";
-                            auDesc.manufacturerName = "Clear";
-                            auDesc.category = "Effect";
-                            auDesc.isInstrument = false;
-                            
-                            juce::String auError;
-                            clearPlugin = auFormat->createInstanceFromDescription(auDesc, 44100.0, 512, auError);
-                            if (clearPlugin) {
-                                juce::Logger::writeToLog("Clear AU loaded successfully as fallback");
-                                setPluginLoaded(true);
+                    } else {
+                        juce::Logger::writeToLog("Failed to load Clear VST3: " + errorMessage);
+                        setPluginLoaded(false);
+                        
+                        // VST3 실패시 AU로 폴백
+                        juce::Logger::writeToLog("Falling back to AudioUnit...");
+                        juce::File auDir("/Library/Audio/Plug-Ins/Components");
+                        juce::File clearAU = auDir.getChildFile("Clear.component");
+                        if (clearAU.exists()) {
+                            juce::Logger::writeToLog("Found Clear AU: " + clearAU.getFullPathName());
+                            juce::AudioPluginFormat* auFormat = nullptr;
+                            for (int i = 0; i < pluginManager.getNumFormats(); ++i) {
+                                auto* format = pluginManager.getFormat(i);
+                                if (format && format->getName().contains("AudioUnit")) {
+                                    auFormat = format;
+                                    juce::Logger::writeToLog("Found AudioUnit format at index " + juce::String(i));
+                                    break;
+                                }
+                            }
+                            if (auFormat) {
+                                juce::PluginDescription auDesc;
+                                auDesc.fileOrIdentifier = clearAU.getFullPathName();
+                                auDesc.pluginFormatName = "AudioUnit";
+                                auDesc.name = "Clear";
+                                auDesc.descriptiveName = "Clear";
+                                auDesc.manufacturerName = "Clear";
+                                auDesc.category = "Effect";
+                                auDesc.isInstrument = false;
                                 
-                                // 앱 실행 시 stereo/mono 파라미터를 stereo로 설정
-                                auto params = clearPlugin->getParameters();
-                                if (params.size() > 13 && params[13]) {
-                                    params[13]->setValueNotifyingHost(1.0f); // stereo로 설정
-                                    juce::Logger::writeToLog("Set stereo/mono parameter to stereo (AU)");
+                                juce::String auError;
+                                clearPlugin = auFormat->createInstanceFromDescription(auDesc, 44100.0, 512, auError);
+                                if (clearPlugin) {
+                                    juce::Logger::writeToLog("Clear AU loaded successfully as fallback");
+                                    setPluginLoaded(true);
+                                    
+                                    // 앱 실행 시 stereo/mono 파라미터를 stereo로 설정
+                                    try {
+                                        auto params = clearPlugin->getParameters();
+                                        if (params.size() > 13 && params[13] != nullptr) {
+                                            params[13]->setValueNotifyingHost(1.0f); // stereo로 설정
+                                            juce::Logger::writeToLog("Set stereo/mono parameter to stereo (AU)");
+                                        }
+                                    } catch (...) {
+                                        juce::Logger::writeToLog("Warning: Failed to set stereo/mono parameter (AU)");
+                                    }
+                                } else {
+                                    juce::Logger::writeToLog("Failed to load Clear AU: " + auError);
+                                    setPluginLoaded(false);
                                 }
                             } else {
-                                juce::Logger::writeToLog("Failed to load Clear AU: " + auError);
+                                juce::Logger::writeToLog("AudioUnit format not found");
                                 setPluginLoaded(false);
                             }
+                        } else {
+                            juce::Logger::writeToLog("Clear AU not found");
+                            setPluginLoaded(false);
                         }
                     }
+                } else {
+                    juce::Logger::writeToLog("VST3 format not found");
+                    setPluginLoaded(false);
                 }
             } else {
-                juce::Logger::writeToLog("VST3 format not found");
+                juce::Logger::writeToLog("Clear.vst3 not found");
+                setPluginLoaded(false);
             }
-        } else {
-            juce::Logger::writeToLog("Clear.vst3 not found");
+        } catch (const std::exception& e) {
+            juce::Logger::writeToLog("Exception during plugin loading: " + juce::String(e.what()));
+            setPluginLoaded(false);
+        } catch (...) {
+            juce::Logger::writeToLog("Unknown exception during plugin loading");
             setPluginLoaded(false);
         }
     }
@@ -3225,9 +3311,16 @@ private:
         int boxY = bottomAreaCenterY - boxSize/2 + 24 - 30; // bottom 영역 중앙 + 24px 아래로 - 30px 위로
         
         // 모드에 따른 SVG 로고 그리기 (17px x 17px, 10% 투명도)
-        if (logoDrawable) {
-            g.setColour(juce::Colours::white.withAlpha(0.1f)); // SVG 자체 색상 사용, 투명도만 적용
-            logoDrawable->drawWithin(g, juce::Rectangle<float>(boxX, boxY, boxSize, boxSize), juce::RectanglePlacement::centred, 1.0f);
+        if (logoDrawable != nullptr) {
+            try {
+                g.setColour(juce::Colours::white.withAlpha(0.1f)); // SVG 자체 색상 사용, 투명도만 적용
+                logoDrawable->drawWithin(g, juce::Rectangle<float>(boxX, boxY, boxSize, boxSize), juce::RectanglePlacement::centred, 1.0f);
+            } catch (...) {
+                // SVG 그리기 실패 시 기본 박스로 대체
+                juce::Logger::writeToLog("Warning: Failed to draw logo SVG, using fallback");
+                g.setColour(textColor.withAlpha(0.1f));
+                g.fillRect(boxX, boxY, boxSize, boxSize);
+            }
         } else {
             // SVG 로드 실패 시 기존 박스 그리기
             g.setColour(textColor.withAlpha(0.1f));
@@ -3584,3 +3677,4 @@ private:
 };
 
 START_JUCE_APPLICATION(ClearHostApplication)
+
