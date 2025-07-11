@@ -1,0 +1,3 @@
+/Users/d/JUCEClearHost/ClearHost_artefacts/CMakeFiles/ClearHost.dir
+/Users/d/JUCEClearHost/ClearHost_artefacts/CMakeFiles/ALL_BUILD.dir
+/Users/d/JUCEClearHost/ClearHost_artefacts/CMakeFiles/ZERO_CHECK.dir
