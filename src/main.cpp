@@ -223,8 +223,8 @@ private:
 
 class KnobWithLabel {
 public:
-    KnobWithLabel(juce::Rectangle<int> area, float value, const juce::String& labelText, juce::Colour knobColour, juce::Colour labelColour, juce::Colour indicatorColour, bool showValue = false)
-        : area(area), value(value), labelText(labelText), knobColour(knobColour), labelColour(labelColour), indicatorColour(indicatorColour), showValue(showValue) {}
+    KnobWithLabel(juce::Rectangle<int> area, float value, const juce::String& labelText, juce::Colour knobColour, juce::Colour labelColour, juce::Colour indicatorColour, bool showValue = false, bool darkMode = false)
+        : area(area), value(value), labelText(labelText), knobColour(knobColour), labelColour(labelColour), indicatorColour(indicatorColour), showValue(showValue), darkMode(darkMode) {}
 
     void draw(juce::Graphics& g, juce::Point<int> mousePos = juce::Point<int>(-1, -1)) const {
         // 노브 중심점
@@ -248,6 +248,7 @@ public:
             float shadowScale = 1.05f;
             // 그림자 알파: 고정값 0.2(20%)
             float shadowAlpha = 0.2f;
+            if (darkMode) shadowAlpha = std::min(1.0f, shadowAlpha * 1.5f);
             
             if (distance > 0) {
                 float normalizedDx = -dx / distance; // 반대 방향
@@ -290,6 +291,7 @@ public:
             float shadowScale = 1.05f;
             // 그림자 알파: 고정값 0.2(20%)
             float shadowAlpha = 0.2f;
+            if (darkMode) shadowAlpha = std::min(1.0f, shadowAlpha * 1.5f);
             
             if (distance > 0) {
                 float normalizedDx = -dx / distance; // 반대 방향
@@ -372,31 +374,33 @@ public:
     juce::Colour labelColour;
     juce::Colour indicatorColour;
     bool showValue;
+    bool darkMode;
 };
 
 class KnobCluster {
 public:
-    KnobCluster(juce::Point<int> center, std::vector<float>& values, std::vector<juce::Rectangle<int>>& rects, juce::Colour faceColor, std::vector<bool>& showValues, float alpha = 1.0f, juce::Colour textColor = juce::Colours::black)
-        : center(center), values(values), knobRects(rects), faceColor(faceColor), showValues(showValues), alpha(alpha), textColor(textColor) {}
+    KnobCluster(juce::Point<int> center, std::vector<float>& values, std::vector<juce::Rectangle<int>>& rects, juce::Colour faceColor, std::vector<bool>& showValues, float alpha = 1.0f, juce::Colour textColor = juce::Colours::black, bool darkMode = false)
+        : center(center), values(values), knobRects(rects), faceColor(faceColor), showValues(showValues), alpha(alpha), textColor(textColor), darkMode(darkMode) {}
     void draw(juce::Graphics& g, juce::Point<int> mousePos = juce::Point<int>(-1, -1)) const {
         struct KnobPos { int dx, dy; const char* label; };
         KnobPos knobPos[3] = {
             {-46, -37, "amb"},
-            {  0,  -2, "vox"}, // 노브 2번 위로 2px 이동
+            {  0,  -2, "vox"},
             { 46, -37, "v. rev"}
         };
         for (int i = 0; i < 3; ++i) {
             int cx = center.x + knobPos[i].dx;
             int cy = center.y + knobPos[i].dy;
-            knobRects[i] = juce::Rectangle<int>(cx - 20, cy - 20, 40, 40); // 40x40로 축소
+            knobRects[i] = juce::Rectangle<int>(cx - 20, cy - 20, 40, 40);
             KnobWithLabel knob(
                 knobRects[i],
                 values[i],
                 knobPos[i].label,
                 textColor.withAlpha(alpha),
                 textColor.withAlpha(alpha),
-                faceColor, // 인디케이터는 알파값 적용 안함
-                showValues[i]
+                faceColor,
+                showValues[i],
+                darkMode
             );
             knob.draw(g, mousePos);
         }
@@ -409,6 +413,7 @@ public:
     std::vector<bool>& showValues;
     float alpha;
     juce::Colour textColor;
+    bool darkMode;
 };
 
 class TextButtonLike {
@@ -755,8 +760,8 @@ private:
 
 class Panel {
 public:
-    Panel(juce::Point<int> center, std::vector<float>& knobValues, std::vector<juce::Rectangle<int>>& knobRects, std::unique_ptr<LED>& statusLED, juce::Colour faceColor, std::vector<bool>& showValues, juce::Colour textColor = juce::Colours::black)
-        : center(center), knobValues(knobValues), knobRects(knobRects), statusLED(statusLED), faceColor(faceColor), showValues(showValues), textColor(textColor), bypassActive(false) {}
+    Panel(juce::Point<int> center, std::vector<float>& knobValues, std::vector<juce::Rectangle<int>>& knobRects, std::unique_ptr<LED>& statusLED, juce::Colour faceColor, std::vector<bool>& showValues, juce::Colour textColor = juce::Colours::black, bool darkMode = false)
+        : center(center), knobValues(knobValues), knobRects(knobRects), statusLED(statusLED), faceColor(faceColor), showValues(showValues), textColor(textColor), bypassActive(false), darkMode(darkMode) {}
     
     void setBypassState(bool bypassOn) {
         bypassActive = bypassOn;
@@ -769,7 +774,7 @@ public:
         float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
         
         // 1. 노브 3개 그리기 (알파값 적용, 단 인디케이터는 제외)
-        KnobCluster cluster(center, knobValues, knobRects, faceColor, showValues, alpha, textColor);
+        KnobCluster cluster(center, knobValues, knobRects, faceColor, showValues, alpha, textColor, darkMode);
         cluster.draw(g, mousePos);
         
         // 2. LED 그리기 (2번 노브 중앙 기준, 위로 69px) - LED는 알파값 적용 안함
@@ -871,6 +876,7 @@ public:
     juce::String stereoText = "stereo";
     bool bypassActive;
     RecButton recButton;
+    bool darkMode;
 };
 
 class Preset {
@@ -1267,7 +1273,7 @@ public:
         face = std::make_unique<Face>();
         
         // Panel 초기화 (LED 초기화 후에 생성)
-        controlPanel = std::make_unique<Panel>(juce::Point<int>(0, 0), knobValues, knobRects, pluginStatusLED, face->getColor(), knobShowValues, face->getTextColor());
+        controlPanel = std::make_unique<Panel>(juce::Point<int>(0, 0), knobValues, knobRects, pluginStatusLED, face->getColor(), knobShowValues, face->getTextColor(), face->isDarkMode());
         
         // Bottom 초기화
         bottom = std::make_unique<Bottom>(face->getColor(), face->getTextColor());
@@ -1454,17 +1460,6 @@ public:
             isBeingDeleted = true;
             stopTimer();
 
-            // 플러그인 리스너 안전 해제
-            if (clearPlugin) {
-                try {
-                    clearPlugin->removeListener(this); // 반드시 해제
-                } catch (const std::exception& e) {
-                    juce::Logger::writeToLog("Exception removing plugin listener: " + juce::String(e.what()));
-                } catch (...) {
-                    juce::Logger::writeToLog("Unknown exception removing plugin listener");
-                }
-            }
-
             // 슬라이더 리스너 해제
             for (auto* knob : knobs) {
                 if (knob) knob->removeListener(this);
@@ -1472,38 +1467,6 @@ public:
             // 콤보박스 리스너 해제
             if (inputDeviceBox) inputDeviceBox->removeListener(this);
             if (outputDeviceBox) outputDeviceBox->removeListener(this);
-
-            // 플러그인 에디터 정리
-            if (pluginEditor) {
-                try {
-                    pluginEditor.reset();
-                } catch (const std::exception& e) {
-                    juce::Logger::writeToLog("Exception resetting plugin editor: " + juce::String(e.what()));
-                } catch (...) {
-                    juce::Logger::writeToLog("Unknown exception resetting plugin editor");
-                }
-            }
-            // 플러그인 정리
-            if (clearPlugin) {
-                try {
-                    clearPlugin.reset();
-                } catch (const std::exception& e) {
-                    juce::Logger::writeToLog("Exception resetting plugin: " + juce::String(e.what()));
-                } catch (...) {
-                    juce::Logger::writeToLog("Unknown exception resetting plugin");
-                }
-            }
-            // MIDI 입력 정리
-            if (midiInput) {
-                try {
-                    midiInput->stop();
-                    midiInput.reset();
-                } catch (const std::exception& e) {
-                    juce::Logger::writeToLog("Exception stopping MIDI input: " + juce::String(e.what()));
-                } catch (...) {
-                    juce::Logger::writeToLog("Unknown exception stopping MIDI input");
-                }
-            }
         } catch (const std::exception& e) {
             juce::Logger::writeToLog("Exception in destructor: " + juce::String(e.what()));
         } catch (...) {
@@ -1543,9 +1506,7 @@ public:
         bottom.reset();
         colorPicker.reset();
         pluginStatusLED.reset();
-        
-        // 오디오 정리 (마지막에)
-        shutdownAudio();
+        // clearPlugin 관련 해제는 MainWindow::closeButtonPressed에서 처리
     }
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override {
         if (clearPlugin) clearPlugin->prepareToPlay(sampleRate, samplesPerBlockExpected);
@@ -1576,7 +1537,7 @@ public:
     }
     void handleIncomingMidiMessage(juce::MidiInput*, const juce::MidiMessage& message) override {
         // 소멸 중이면 콜백 무시
-        if (isBeingDeleted) return;
+        if (isBeingDeleted || !clearPlugin) return;
         
         if (message.isController() && clearPlugin) mapMidiCCToClearParameter(message);
     }
@@ -1804,37 +1765,33 @@ public:
     
     void audioProcessorParameterChanged(juce::AudioProcessor*, int parameterIndex, float newValue) override {
         // 소멸 중이면 콜백 무시
-        if (isBeingDeleted) return;
+        if (isBeingDeleted || !clearPlugin) return;
         
-        // knobValues 벡터 크기 체크
-        if (knobValues.size() < 3) {
-            juce::Logger::writeToLog("audioProcessorParameterChanged: knobValues size too small: " + juce::String(knobValues.size()));
-            return;
-        }
-        
-        // 파라미터 인덱스에 따른 노브 업데이트
-        if (parameterIndex == 1 && knobValues.size() > 0) {
-            knobValues[0] = newValue * 2.0f; // 0~1을 0~2로 변환
-            updateKnobDisplayState(0, knobValues[0]);
-        }
-        else if (parameterIndex == 14 && knobValues.size() > 1) {
-            knobValues[1] = newValue * 2.0f; // 0~1을 0~2로 변환
-            updateKnobDisplayState(1, knobValues[1]);
-        }
-        else if (parameterIndex == 12 && knobValues.size() > 2) {
-            knobValues[2] = newValue * 2.0f; // 0~1을 0~2로 변환
-            updateKnobDisplayState(2, knobValues[2]);
+        // 노브 값 업데이트 (파라미터 인덱스에 따른 매핑)
+        int knobIndex = -1;
+        switch (parameterIndex) {
+            case 1: knobIndex = 0; break;  // Ambience Gain
+            case 14: knobIndex = 1; break; // Voice Gain
+            case 12: knobIndex = 2; break; // Voice Reverb Gain
         }
         
-        repaint();
+        if (knobIndex >= 0 && knobIndex < knobValues.size()) {
+            // 플러그인 파라미터 값(0~1)을 노브 값(0~2)으로 변환
+            float knobValue = newValue * 2.0f;
+            knobValues[knobIndex] = knobValue;
+            
+            // 노브 값 표시 상태 업데이트
+            updateKnobDisplayState(knobIndex, knobValue);
+            
+            repaint();
+        }
     }
     
     void audioProcessorChanged(juce::AudioProcessor*, const juce::AudioProcessorListener::ChangeDetails&) override {
         // 소멸 중이면 콜백 무시
-        if (isBeingDeleted) return;
+        if (isBeingDeleted || !clearPlugin) return;
         
-        // 플러그인이 변경되면 노브 업데이트
-        updateKnobsFromPlugin();
+        // 플러그인 변경 시 처리 (필요시)
     }
     
     void comboBoxChanged(juce::ComboBox* comboBox) override {
@@ -2386,48 +2343,39 @@ public:
             }
         }
         
-        // Panel의 LED 클릭 처리 (테스트용)
-        if (controlPanel && controlPanel->hitTestLED(pos)) {
-            juce::Logger::writeToLog("LED clicked - Testing Rec button functionality");
-            // LED 클릭 시 Rec 버튼도 토글 (테스트용)
-            controlPanel->toggleRecButton();
-            juce::Logger::writeToLog("Rec button toggled via LED click - State: " + juce::String(controlPanel->isRecButtonActive() ? "ON" : "OFF"));
-            
-            // Rec 버튼이 활성화되면 녹음 시작
-            if (controlPanel->isRecButtonActive()) {
-                if (audioRecorder) {
-                    audioRecorder->startRecording();
-                }
-                startTimer(100); // 10fps로 변경 (60fps에서 10fps로)
-            } else {
-                // Rec 버튼이 비활성화되면 녹음 중지
-                if (audioRecorder && audioRecorder->isRecordingActive()) {
-                    audioRecorder->stopRecording();
-                }
-            }
-            
-            repaint();
-            return;
-        }
+        // Panel의 LED 클릭 처리 (테스트용) - 제거됨
+        // if (controlPanel && controlPanel->hitTestLED(pos)) {
+        //     juce::Logger::writeToLog("LED clicked - Testing Rec button functionality");
+        //     controlPanel->toggleRecButton();
+        //     juce::Logger::writeToLog("Rec button toggled via LED click - State: " + juce::String(controlPanel->isRecButtonActive() ? "ON" : "OFF"));
+        //     if (controlPanel->isRecButtonActive()) {
+        //         if (audioRecorder) {
+        //             audioRecorder->startRecording();
+        //         }
+        //         startTimer(100); // 10fps로 변경 (60fps에서 10fps로)
+        //     } else {
+        //         if (audioRecorder && audioRecorder->isRecordingActive()) {
+        //             audioRecorder->stopRecording();
+        //         }
+        //     }
+        //     repaint();
+        //     return;
+        // }
         
         // Panel의 Rec 버튼 클릭 처리
         if (controlPanel && controlPanel->hitTestRecButton(pos)) {
             controlPanel->toggleRecButton();
             juce::Logger::writeToLog("Rec button clicked - State: " + juce::String(controlPanel->isRecButtonActive() ? "ON" : "OFF"));
-            
-            // Rec 버튼이 활성화되면 녹음 시작
             if (controlPanel->isRecButtonActive()) {
                 if (audioRecorder) {
                     audioRecorder->startRecording();
                 }
                 startTimer(100); // 10fps로 변경 (60fps에서 10fps로)
             } else {
-                // Rec 버튼이 비활성화되면 녹음 중지
                 if (audioRecorder && audioRecorder->isRecordingActive()) {
                     audioRecorder->stopRecording();
                 }
             }
-            
             repaint();
             return;
         }
@@ -2549,24 +2497,24 @@ public:
                 return;
             }
         }
-        // 프리셋 버튼 5개 - TextButtonLike hit test 사용
-        juce::String btnNames[6] = {"S* up**","Too Loud","sommers","Clear Voice","Dry Voice","Vocal Reference"};
-        for (int i = 0; i < 6; ++i) {
-            TextButtonLike tempBtn(btnNames[i], juce::Point<int>(buttonRects[i].getX(), buttonRects[i].getY()), DEFAULT_ALPHA);
-            if (tempBtn.hitTest(pos)) {
-                // 기존 preset 기능 매핑
-                switch (i) {
-                    case 0: startAnimation({0.5, 0.0, 0.0}); break; // S* up**
-                    case 1: startAnimation({0.5, 0.2, 0.2}); break; // Too Loud
-                    case 2: startAnimation({0.5, 1.0, 0.0}); break; // sommers
-                    case 3: startAnimation({0.0, 0.5, 0.5}); break; // Clear Voice
-                    case 4: startAnimation({0.0, 0.5, 0.0}); break; // Dry Voice
-                    case 5: startAnimation({0.5, 0.1, 0.1}); break; // Vocal Reference
-                }
-                repaint();
-                return;
-            }
-        }
+        // 프리셋 버튼들은 실제로 그려지지 않으므로 hit test 제거
+        // juce::String btnNames[6] = {"S* up**","Too Loud","sommers","Clear Voice","Dry Voice","Vocal Reference"};
+        // for (int i = 0; i < 6; ++i) {
+        //     TextButtonLike tempBtn(btnNames[i], juce::Point<int>(buttonRects[i].getX(), buttonRects[i].getY()), DEFAULT_ALPHA);
+        //     if (tempBtn.hitTest(pos)) {
+        //         // 기존 preset 기능 매핑
+        //         switch (i) {
+        //             case 0: startAnimation({0.5, 0.0, 0.0}); break; // S* up**
+        //             case 1: startAnimation({0.5, 0.2, 0.2}); break; // Too Loud
+        //             case 2: startAnimation({0.5, 1.0, 0.0}); break; // sommers
+        //             case 3: startAnimation({0.0, 0.5, 0.5}); break; // Clear Voice
+        //             case 4: startAnimation({0.0, 0.5, 0.0}); break; // Dry Voice
+        //             case 5: startAnimation({0.5, 0.1, 0.1}); break; // Vocal Reference
+        //         }
+        //         repaint();
+        //         return;
+        //     }
+        // }
 
         
         // 입력 드롭다운 아이템 클릭
@@ -3808,19 +3756,68 @@ public:
         setVisible(true);
     }
     void closeButtonPressed() override {
-        // 앱 종료 시 녹음 중지 (안전하게)
-        try {
-            if (auto* app = dynamic_cast<ClearHostApp*>(getContentComponent())) {
+        // 안전한 순서로 clearPlugin 관련 해제
+        if (auto* app = dynamic_cast<ClearHostApp*>(getContentComponent())) {
+            try {
                 // 녹음 중이면 중지
                 if (app->audioRecorder && app->audioRecorder->isRecordingActive()) {
                     app->audioRecorder->stopRecording();
                 }
+                
                 // 시스템 출력 소스 복구
                 app->restoreSystemOutputDevice();
+                
+                // 1. 오디오 정리 (가장 먼저!)
+                app->shutdownAudio();
+                juce::Logger::writeToLog("Audio shutdown completed in closeButtonPressed");
+                
+                // 2. 플러그인 리스너 해제
+                if (app->clearPlugin) {
+                    try {
+                        auto params = app->clearPlugin->getParameters();
+                        if (params.size() > 0 && params[0] != nullptr) {
+                            app->clearPlugin->removeListener(app);
+                            juce::Logger::writeToLog("Plugin listener removed successfully in closeButtonPressed");
+                        } else {
+                            juce::Logger::writeToLog("Plugin appears to be invalid, skipping listener removal");
+                        }
+                    } catch (const std::exception& e) {
+                        juce::Logger::writeToLog("Exception removing plugin listener: " + juce::String(e.what()));
+                    } catch (...) {
+                        juce::Logger::writeToLog("Unknown exception removing plugin listener");
+                    }
+                }
+                
+                // 3. 플러그인 에디터 해제
+                if (app->pluginEditor) {
+                    try {
+                        app->pluginEditor.reset();
+                        juce::Logger::writeToLog("Plugin editor reset successfully in closeButtonPressed");
+                    } catch (const std::exception& e) {
+                        juce::Logger::writeToLog("Exception resetting plugin editor: " + juce::String(e.what()));
+                    } catch (...) {
+                        juce::Logger::writeToLog("Unknown exception resetting plugin editor");
+                    }
+                }
+                
+                // 4. 플러그인 해제 (마지막)
+                if (app->clearPlugin) {
+                    try {
+                        app->clearPlugin.reset();
+                        juce::Logger::writeToLog("Plugin reset successfully in closeButtonPressed");
+                    } catch (const std::exception& e) {
+                        juce::Logger::writeToLog("Exception resetting plugin: " + juce::String(e.what()));
+                    } catch (...) {
+                        juce::Logger::writeToLog("Unknown exception resetting plugin");
+                    }
+                }
+            } catch (const std::exception& e) {
+                juce::Logger::writeToLog("Exception in closeButtonPressed cleanup: " + juce::String(e.what()));
+            } catch (...) {
+                juce::Logger::writeToLog("Unknown exception in closeButtonPressed cleanup");
             }
-        } catch (...) {
-            juce::Logger::writeToLog("Error during cleanup on exit");
         }
+        
         juce::JUCEApplication::getInstance()->systemRequestedQuit();
     }
 };
