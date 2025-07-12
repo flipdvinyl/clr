@@ -511,9 +511,9 @@ public:
 
 class AudioRecorder {
 public:
-    AudioRecorder() : isRecording(false), sampleRate(44100), numChannels(2), fileStream(nullptr), 
+    AudioRecorder(int actualSampleRate = 44100) : isRecording(false), sampleRate(actualSampleRate), numChannels(2), fileStream(nullptr), 
                      bufferSize(32768), bufferIndex(0), audioBuffer(nullptr), flushCounter(0) {
-        // WAV 파일 헤더 초기화
+        // WAV 파일 헤더 초기화 (실제 샘플레이트 사용)
         initializeWavHeader();
         // 오디오 버퍼 초기화 (32KB 버퍼로 증가)
         audioBuffer = new int16_t[bufferSize * numChannels];
@@ -534,7 +534,7 @@ public:
         
         // 현재 시간으로 파일명 생성
         filename = generateFilename();
-        juce::Logger::writeToLog("Starting recording to: " + filename);
+        juce::Logger::writeToLog("Starting recording to: " + filename + " with sample rate: " + juce::String(sampleRate));
         
         // 임시 파일 생성
         tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
@@ -658,8 +658,8 @@ private:
         uint32_t fmtChunkSize = 16;
         uint16_t audioFormat = 1;
         uint16_t numChannels = 2;
-        uint32_t sampleRate = 44100;
-        uint32_t byteRate = 176400;
+        uint32_t sampleRate = 44100; // 기본값, initializeWavHeader에서 실제 값으로 변경
+        uint32_t byteRate = 176400; // 기본값, initializeWavHeader에서 실제 값으로 변경
         uint16_t blockAlign = 4;
         uint16_t bitsPerSample = 16;
         char data[4] = {'d', 'a', 't', 'a'};
@@ -667,6 +667,8 @@ private:
     } wavHeader;
     
     void initializeWavHeader() {
+        // 실제 샘플레이트로 WAV 헤더 설정
+        wavHeader.sampleRate = sampleRate;
         wavHeader.byteRate = wavHeader.sampleRate * wavHeader.numChannels * wavHeader.bitsPerSample / 8;
         wavHeader.blockAlign = wavHeader.numChannels * wavHeader.bitsPerSample / 8;
     }
@@ -1420,7 +1422,7 @@ public:
         // 로고 SVG 로드
         loadLogoSVGs();
         
-        // 오디오 녹음 기능 초기화
+        // 오디오 녹음 기능 초기화 (기본 샘플레이트로 초기화, prepareToPlay에서 실제 샘플레이트로 업데이트)
         audioRecorder = std::make_unique<AudioRecorder>();
     }
     
@@ -1511,7 +1513,13 @@ public:
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override {
         if (clearPlugin) clearPlugin->prepareToPlay(sampleRate, samplesPerBlockExpected);
         
-        // AudioRecorder는 이미 생성자에서 기본값으로 초기화됨
+        // AudioRecorder를 실제 샘플레이트로 업데이트
+        if (audioRecorder) {
+            // 기존 AudioRecorder를 해제하고 새로운 샘플레이트로 재생성
+            audioRecorder.reset();
+            audioRecorder = std::make_unique<AudioRecorder>(static_cast<int>(sampleRate));
+            juce::Logger::writeToLog("AudioRecorder updated with actual sample rate: " + juce::String(static_cast<int>(sampleRate)));
+        }
     }
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override {
         if (clearPlugin) {
