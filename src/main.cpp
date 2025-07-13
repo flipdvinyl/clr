@@ -698,7 +698,7 @@ private:
 
 class RecButton {
 public:
-    RecButton() : isOn(false), blinkTimer(0), blinkState(false) {}
+    RecButton() : isOn(false), blinkTimer(0), blinkState(false), darkMode(false) {}
     
     void toggle() { 
         isOn = !isOn; 
@@ -744,7 +744,14 @@ public:
         // rec LED가 빨간색이고 녹음 기능이 ON일 때만 왼쪽에 'rec' 텍스트 표시
         if (isRed && isOn) {
             g.setFont(juce::Font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain));
-            g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+            
+            // 다크모드 지원: 다크모드일 때 흰색, 라이트모드일 때 검은색
+            juce::Colour textColour = darkMode ? juce::Colours::white : juce::Colours::black;
+            
+            // bypass ON일 때 dim 지원: 반투명하게
+            float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA;
+            
+            g.setColour(textColour.withAlpha(alpha));
             int textWidth = g.getCurrentFont().getStringWidth("rec");
             g.drawText("rec", center.x - textWidth - 6, center.y - 10, textWidth, 16, juce::Justification::centredRight);
         }
@@ -767,10 +774,13 @@ public:
     
     juce::Point<int> center;
     
+    void setDarkMode(bool mode) { darkMode = mode; }
+    
 private:
     bool isOn;
     int blinkTimer;
     bool blinkState;
+    bool darkMode;
 };
 
 class Panel {
@@ -867,6 +877,10 @@ public:
     
     bool isRecButtonActive() const {
         return recButton.isActive();
+    }
+    
+    void setRecButtonDarkMode(bool mode) {
+        recButton.setDarkMode(mode);
     }
     
     // LED hit test를 위한 함수
@@ -1616,6 +1630,11 @@ public:
             }
             controlPanel->updateStereoText(stereoText);
             
+            // RecButton의 darkMode 설정
+            if (face) {
+                controlPanel->setRecButtonDarkMode(face->isDarkMode());
+            }
+            
             controlPanel->center = panelCenter;
             controlPanel->draw(g, currentMousePos);
         }
@@ -1810,8 +1829,8 @@ public:
             
             // 노브 값 표시 상태 업데이트
             updateKnobDisplayState(knobIndex, knobValue);
-            
-            repaint();
+        
+        repaint();
         }
     }
     
@@ -3786,7 +3805,7 @@ public:
     }
     void closeButtonPressed() override {
         // 안전한 순서로 clearPlugin 관련 해제
-        if (auto* app = dynamic_cast<ClearHostApp*>(getContentComponent())) {
+            if (auto* app = dynamic_cast<ClearHostApp*>(getContentComponent())) {
             try {
                 // 녹음 중이면 중지
                 if (app->audioRecorder && app->audioRecorder->isRecordingActive()) {
@@ -3812,7 +3831,7 @@ public:
                         }
                     } catch (const std::exception& e) {
                         juce::Logger::writeToLog("Exception removing plugin listener: " + juce::String(e.what()));
-                    } catch (...) {
+        } catch (...) {
                         juce::Logger::writeToLog("Unknown exception removing plugin listener");
                     }
                 }
@@ -3838,7 +3857,7 @@ public:
                         juce::Logger::writeToLog("Exception resetting plugin: " + juce::String(e.what()));
                     } catch (...) {
                         juce::Logger::writeToLog("Unknown exception resetting plugin");
-                    }
+        }
                 }
             } catch (const std::exception& e) {
                 juce::Logger::writeToLog("Exception in closeButtonPressed cleanup: " + juce::String(e.what()));
