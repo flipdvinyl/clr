@@ -719,30 +719,43 @@ public:
     }
     
     void draw(juce::Graphics& g, juce::Point<int> center, bool bypassActive = false) const {
+        bool isRed = false;
+        
         if (!isOn) {
             // OFF 상태: 빨간색 (RGB 255,0,0)
             g.setColour(juce::Colour(255, 0, 0).withAlpha(bypassActive ? 0.3f : 1.0f));
+            isRed = true;
         } else {
             // ON 상태: 깜빡임 효과 - preset LED OFF 색과 동일한 컬러 사용
             if (blinkState) {
                 g.setColour(juce::Colour(255, 0, 0).withAlpha(bypassActive ? 0.3f : 1.0f)); // bypass 상태에 따른 알파값 적용
+                isRed = true;
             } else {
                 // 검정색, 30% 알파값 (preset LED OFF와 동일) - bypass 상태일 때는 추가 알파값 적용
                 float alpha = bypassActive ? 0.3f * 0.3f : 0.3f; // bypass on일 때 30% * 30% = 9%, off일 때 30%
                 g.setColour(juce::Colour(0, 0, 0).withAlpha(alpha));
+                isRed = false;
             }
         }
         
         // LED와 동일한 모양 (6px 원)
         g.fillEllipse(center.x - 3, center.y - 3, 6, 6);
+        
+        // rec LED가 빨간색이고 녹음 기능이 ON일 때만 왼쪽에 'rec' 텍스트 표시
+        if (isRed && isOn) {
+            g.setFont(juce::Font("Euclid Circular B", DEFAULT_FONT_SIZE, juce::Font::plain));
+            g.setColour(juce::Colours::black.withAlpha(DEFAULT_ALPHA));
+            int textWidth = g.getCurrentFont().getStringWidth("rec");
+            g.drawText("rec", center.x - textWidth - 6, center.y - 10, textWidth, 16, juce::Justification::centredRight);
+        }
     }
     
     bool hitTest(juce::Point<int> pos) const {
-        // separator 우측 상단 기준으로 위로 13px, 좌로 13px 위치 계산
+        // separator 우측 상단 기준으로 위로 13px, 좌로 12px 위치 계산
         int separatorWidth = 145;
         int separatorX = 80 - separatorWidth / 2; // 중앙정렬
         int separatorY = 121 - 4 / 2; // 중앙정렬 (5px 아래로 이동)
-        juce::Point<int> recCenter(separatorX + separatorWidth - 13, separatorY - 13); // separator 우측 상단에서 위로 13px, 좌로 13px
+        juce::Point<int> recCenter(separatorX + separatorWidth - 12, separatorY - 13); // separator 우측 상단에서 위로 13px, 좌로 12px
         
         float distance = pos.getDistanceFrom(recCenter);
         return distance <= 8.0f; // 6px 원의 반지름 + 5px 확장 = 8px
@@ -787,11 +800,11 @@ public:
             statusLED->draw(g);
         }
         
-        // 3. Rec 버튼 그리기 (separator 우측 상단 기준으로 위로 13px, 좌로 13px)
+        // 3. Rec 버튼 그리기 (separator 우측 상단 기준으로 위로 13px, 좌로 12px)
         int separatorWidth = 145;
         int separatorX = 80 - separatorWidth / 2; // 중앙정렬
         int separatorY = 121 - 4 / 2; // 중앙정렬 (5px 아래로 이동)
-        juce::Point<int> recCenter(separatorX + separatorWidth - 13, separatorY - 13); // separator 우측 상단에서 위로 13px, 좌로 13px
+        juce::Point<int> recCenter(separatorX + separatorWidth - 12, separatorY - 13); // separator 우측 상단에서 위로 13px, 좌로 12px
         recButton.draw(g, recCenter, bypassActive);
         
         // 4. Stereo/Mono 토글 버튼 그리기 (알파값 적용)
@@ -978,8 +991,11 @@ public:
     }
     void setPosition(juce::Point<int> pos) { position = pos; }
     void setPaletteY(int) { paletteY = 265 - paletteH; } // 팔레트 아래쪽이 y=265에 맞게 (5px 아래로 이동)
-    void draw(juce::Graphics& g, juce::Colour textColor = juce::Colours::black) const {
+    void draw(juce::Graphics& g, juce::Colour textColor = juce::Colours::black, bool bypassActive = false) const {
         if (isOpen) drawPalette(g);
+        
+        // bypass 상태에 따른 알파값 설정 (다른 SVG와 동일하게)
+        float alpha = bypassActive ? 0.3f : DEFAULT_ALPHA; // bypass on일 때 30%, off일 때 기본 알파값
         
         // 라이트/다크모드에 따라 SVG 파일 선택 (로고와 동일한 조건)
         bool isDarkMode = (textColor == juce::Colours::white);
@@ -997,23 +1013,27 @@ public:
             svgFile = execResourcesDir.getChildFile(svgFileName);
         }
         
-        // SVG 아이콘 그리기 (8px x 1.3 = 10.4px, 반올림하여 10px)
-        int iconSize = 10;
+
+        
+        // SVG 아이콘 그리기 (가로 13px)
+        int iconSize = 13;
         if (svgFile.existsAsFile()) {
             std::unique_ptr<juce::Drawable> drawable = juce::Drawable::createFromSVGFile(svgFile);
             if (drawable) {
+                g.setOpacity(alpha); // bypass 상태에 따른 알파값 적용
                 g.setColour(juce::Colours::white); // SVG 자체 색상 사용, 투명도만 적용
-                drawable->drawWithin(g, juce::Rectangle<float>(position.x - iconSize/2, position.y - iconSize/2, iconSize, iconSize), juce::RectanglePlacement::centred, 1.0f);
+                drawable->drawWithin(g, juce::Rectangle<float>(position.x - iconSize/2, position.y - iconSize/2, iconSize, iconSize), juce::RectanglePlacement::centred, alpha);
+                g.setOpacity(1.0f);
             } else {
                 // SVG 로드 실패 시 기본 원형 아이콘
                 float radius = 4.0f;
-                g.setColour(selectedColor);
+                g.setColour(selectedColor.withAlpha(alpha));
                 g.fillEllipse(position.x - radius, position.y - radius, radius * 2, radius * 2);
             }
         } else {
             // SVG 파일이 없으면 기본 원형 아이콘
             float radius = 4.0f;
-            g.setColour(selectedColor);
+            g.setColour(selectedColor.withAlpha(alpha));
             g.fillEllipse(position.x - radius, position.y - radius, radius * 2, radius * 2);
         }
     }
@@ -1026,7 +1046,8 @@ public:
       static constexpr int paletteH = rows * cellSizeY; // 전체 높이 10px 줄임
     bool hitTest(juce::Point<int> pos) const {
         if (isOpen && hitTestPalette(pos)) return false; // 팔레트 클릭시 버튼은 hit 안됨
-        float radius = 4.0f;
+        int iconSize = 13; // SVG 아이콘 크기와 동일
+        float radius = iconSize / 2.0f; // 반지름 = 아이콘 크기의 절반
         float distance = pos.getDistanceFrom(position);
         return distance <= radius;
     }
@@ -1133,7 +1154,7 @@ public:
                     // in 화살표 그리기
                     arrowDrawable->drawWithin(g, juce::Rectangle<float>(inX, arrowY, arrowSize, arrowSize), juce::RectanglePlacement::centred, alpha);
                     // out 화살표 그리기 (우측 정렬)
-                    int outX = 152 - arrowSize - 1; // 오른쪽으로 1px 이동
+                    int outX = 152 - arrowSize - 2; // 좌로 1px 이동
                     arrowDrawable->drawWithin(g, juce::Rectangle<float>(outX, arrowY, arrowSize, arrowSize), juce::RectanglePlacement::centred, alpha);
                     g.setOpacity(1.0f);
                 } catch (...) {
@@ -1147,7 +1168,7 @@ public:
                     arrowPath.addTriangle(inX, arrowY + 5, inX + 8, arrowY + 10, inX, arrowY + 15);
                     g.fillPath(arrowPath);
                     // out 화살표 (간단한 삼각형)
-                    int outX = 152 - arrowSize - 1; // 오른쪽으로 1px 이동
+                    int outX = 152 - arrowSize - 2; // 좌로 1px 이동
                     juce::Path outArrowPath;
                     outArrowPath.addTriangle(outX + 8, arrowY + 5, outX, arrowY + 10, outX + 8, arrowY + 15);
                     g.fillPath(outArrowPath);
@@ -1161,7 +1182,7 @@ public:
                 arrowPath.addTriangle(inX, arrowY + 5, inX + 8, arrowY + 10, inX, arrowY + 15);
                 g.fillPath(arrowPath);
                 // out 화살표 (간단한 삼각형)
-                int outX = 152 - arrowSize - 1; // 오른쪽으로 1px 이동
+                int outX = 152 - arrowSize - 2; // 좌로 1px 이동
                 juce::Path outArrowPath;
                 outArrowPath.addTriangle(outX + 8, arrowY + 5, outX, arrowY + 10, outX + 8, arrowY + 15);
                 g.fillPath(outArrowPath);
@@ -1282,7 +1303,7 @@ public:
         
         // ColorPicker 초기화 (오른쪽 아래 위치)
         colorPicker = std::make_unique<ColorPicker>();
-        colorPicker->setPosition(juce::Point<int>(139, 253)); // 5px 아래로 이동
+        colorPicker->setPosition(juce::Point<int>(143, 252)); // 좌로 1px, 아래로 1px 이동
         
         // AudioRecorder 초기화
         audioRecorder = std::make_unique<AudioRecorder>();
@@ -1606,7 +1627,7 @@ public:
         
         // ColorPicker 그리기
         if (colorPicker && face) {
-            colorPicker->draw(g, face->getTextColor());
+            colorPicker->draw(g, face->getTextColor(), bypassActive);
         }
         
         // 입력 드롭다운이 열려있으면 장치 리스트 표시 (in 버튼 바로 아래)
@@ -1722,7 +1743,6 @@ public:
             constexpr int paletteH = ColorPicker::paletteH;
             int paletteY = bottomY + bottomHeight - paletteH;
             colorPicker->setPaletteY(paletteY);
-            colorPicker->draw(g);
         }
     }
     void resized() override {
@@ -3408,8 +3428,9 @@ private:
         // Bottom 영역 중앙: Y = (125 + 265) / 2 = 195 (5px 아래로 이동)
         int bottomAreaCenterY = 200; // 5px 아래로 이동
         
-        // 박스 크기: 17px x 17px (원본)
-        int boxSize = 17;
+        // 박스 크기: 15px 가로, 세로는 비율에 맞게 자동 조정
+        int boxWidth = 15;
+        int boxHeight = 15; // 기본값, SVG 비율에 따라 조정됨
         
         // 텍스트 크기 계산 (30pt - 2pt = 28pt)
         g.setFont(juce::Font("Euclid Circular B", 28.0f, juce::Font::plain));
@@ -3420,37 +3441,37 @@ private:
         int spacing = 8;
         
         // 로고셋 전체 너비 계산
-        int logoSetWidth = boxSize + spacing + textWidth;
+        int logoSetWidth = boxWidth + spacing + textWidth;
         
         // 로고셋 전체를 80px 중앙에 정렬
         int logoSetX = 80 - logoSetWidth / 2;
         
         // 박스 위치 (아래로 24px 이동, 전체 위로 30px 이동)
         int boxX = logoSetX;
-        int boxY = bottomAreaCenterY - boxSize/2 + 24 - 30; // bottom 영역 중앙 + 24px 아래로 - 30px 위로
+        int boxY = bottomAreaCenterY - boxHeight/2 + 24 - 30; // bottom 영역 중앙 + 24px 아래로 - 30px 위로
         
-        // 모드에 따른 SVG 로고 그리기 (17px x 17px, 10% 투명도)
+        // 모드에 따른 SVG 로고 그리기 (15px 가로, 세로는 비율에 맞게 자동 조정, 10% 투명도)
         if (logoDrawable != nullptr) {
             try {
                 g.setColour(juce::Colours::white.withAlpha(0.1f)); // SVG 자체 색상 사용, 투명도만 적용
-                logoDrawable->drawWithin(g, juce::Rectangle<float>(boxX, boxY, boxSize, boxSize), juce::RectanglePlacement::centred, 1.0f);
+                logoDrawable->drawWithin(g, juce::Rectangle<float>(boxX, boxY, boxWidth, boxHeight), juce::RectanglePlacement::centred, 1.0f);
             } catch (...) {
                 // SVG 그리기 실패 시 기본 박스로 대체
                 juce::Logger::writeToLog("Warning: Failed to draw logo SVG, using fallback");
                 g.setColour(textColor.withAlpha(0.1f));
-                g.fillRect(boxX, boxY, boxSize, boxSize);
+                g.fillRect(boxX, boxY, boxWidth, boxHeight);
             }
         } else {
             // SVG 로드 실패 시 기존 박스 그리기
             g.setColour(textColor.withAlpha(0.1f));
-            g.fillRect(boxX, boxY, boxSize, boxSize);
+            g.fillRect(boxX, boxY, boxWidth, boxHeight);
         }
         
         // 'sup clr' 텍스트 그리기 (28pt, textColor 10% 투명도, 텍스트만 위로 2px 추가 이동)
         g.setColour(textColor.withAlpha(0.1f));
         g.setFont(juce::Font("Euclid Circular B", 28.0f, juce::Font::plain));
-        int textX = boxX + boxSize + spacing; // 박스 오른쪽 + 8px 여백
-        int textY = boxY + boxSize/2 - textHeight/2 - 2; // 박스 세로 중앙에 텍스트 세로 중앙 정렬 - 2px 위로
+        int textX = boxX + boxWidth + spacing; // 박스 오른쪽 + 8px 여백
+        int textY = boxY + boxHeight/2 - textHeight/2 - 2; // 박스 세로 중앙에 텍스트 세로 중앙 정렬 - 2px 위로
         g.drawText("sup clr", textX, textY, textWidth, textHeight, juce::Justification::centredLeft);
     }
     
