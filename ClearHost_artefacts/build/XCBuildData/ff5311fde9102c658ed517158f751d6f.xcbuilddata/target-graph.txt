@@ -1,7 +1,0 @@
-Target dependency graph (3 targets)
-Target 'ALL_BUILD' in project 'ClearHost'
-➜ Explicit dependency on target 'ClearHost' in project 'ClearHost'
-➜ Explicit dependency on target 'ZERO_CHECK' in project 'ClearHost'
-Target 'ClearHost' in project 'ClearHost'
-➜ Explicit dependency on target 'ZERO_CHECK' in project 'ClearHost'
-Target 'ZERO_CHECK' in project 'ClearHost' (no dependencies)

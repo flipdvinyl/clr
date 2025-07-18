@@ -2371,6 +2371,12 @@ public:
             for (int i = 0; i < knobRects.size(); ++i) {
                 if (knobRects[i].contains(pos)) {
                     knobValues[i] = 1.0f; // 0~2 범위에서 중간값
+                    
+                    // preset이 활성화된 상태에서 노브를 더블클릭으로 기본값으로 변경하면 preset 상태 리셋
+                    if (presetActive) {
+                        resetPresetToDefault();
+                    }
+                    
                     // 파라미터 반영
                     if (clearPlugin) {
                         auto params = clearPlugin->getParameters();
