@@ -2351,15 +2351,113 @@ public:
     
     void mapMidiCCToClearParameter(const juce::MidiMessage& message) {
         int cc = message.getControllerNumber();
-        float value = message.getControllerValue() / 127.0f;
+        int ccValue = message.getControllerValue();
+        float value = ccValue / 127.0f;
         int paramIdx = -1;
-        if (cc == 21) paramIdx = 0;
-        else if (cc == 22) paramIdx = 1;
-        else if (cc == 23) paramIdx = 2;
+        
+        // USB MIDI CC 모니터링 및 변수 업데이트
+        switch (cc) {
+            case 21: // vox
+                Knob1 = ccValue;
+                paramIdx = 1; // vox 파라미터 인덱스
+                juce::Logger::writeToLog("MIDI CC 21 (Knob1 - vox): " + juce::String(Knob1));
+                
+                // preset이 활성화된 상태에서 노브를 변경하면 preset 상태 리셋
+                if (presetActive) {
+                    resetPresetToDefault();
+                }
+                break;
+            case 22: // amb
+                Knob2 = ccValue;
+                paramIdx = 14; // amb 파라미터 인덱스
+                juce::Logger::writeToLog("MIDI CC 22 (Knob2 - amb): " + juce::String(Knob2));
+                
+                // preset이 활성화된 상태에서 노브를 변경하면 preset 상태 리셋
+                if (presetActive) {
+                    resetPresetToDefault();
+                }
+                break;
+            case 23: // v. rev
+                Knob3 = ccValue;
+                paramIdx = 12; // v. rev 파라미터 인덱스
+                juce::Logger::writeToLog("MIDI CC 23 (Knob3 - v. rev): " + juce::String(Knob3));
+                
+                // preset이 활성화된 상태에서 노브를 변경하면 preset 상태 리셋
+                if (presetActive) {
+                    resetPresetToDefault();
+                }
+                break;
+            case 24: // Bypass
+                Bypass = (ccValue >= 64); // 64 이상이면 true, 미만이면 false
+                juce::Logger::writeToLog("MIDI CC 24 (Bypass): " + juce::String(Bypass ? "ON" : "OFF"));
+                
+                // Bypass 상태 업데이트 (True일 때 bypass off, False일 때 bypass on)
+                bool bypassState = !Bypass;
+                setBypassActive(bypassState);
+                if (controlPanel) {
+                    controlPanel->setBypassState(bypassState);
+                }
+                if (bottom) {
+                    bottom->setBypassState(bypassState);
+                }
+                
+                // JUCE 플러그인 바이패스 기능 구현 (화면 버튼과 동일한 로직)
+                if (clearPlugin) {
+                    // 먼저 플러그인의 바이패스 파라미터를 찾아서 사용
+                    auto params = clearPlugin->getParameters();
+                    bool bypassParamFound = false;
+                    
+                    for (int i = 0; i < params.size(); ++i) {
+                        if (params[i] && params[i]->getName(100).toLowerCase().contains("bypass")) {
+                            // 바이패스 파라미터를 찾았으면 설정
+                            float newValue = bypassState ? 1.0f : 0.0f;
+                            params[i]->setValueNotifyingHost(newValue);
+                            juce::Logger::writeToLog("Plugin bypass parameter " + juce::String(i) + " set to: " + juce::String(newValue));
+                            bypassParamFound = true;
+                            break;
+                        }
+                    }
+                    
+                    // 플러그인에 바이패스 파라미터가 없는 경우, AudioProcessor의 내장 바이패스 기능 사용
+                    if (!bypassParamFound) {
+                        // AudioProcessor의 바이패스 기능 사용
+                        if (clearPlugin->getBypassParameter()) {
+                            clearPlugin->getBypassParameter()->setValueNotifyingHost(bypassState ? 1.0f : 0.0f);
+                            juce::Logger::writeToLog("AudioProcessor bypass set to: " + juce::String(bypassState ? "ON" : "OFF"));
+                        } else {
+                            // 바이패스 파라미터가 없는 경우, 플러그인을 직접 바이패스
+                            // 이는 플러그인이 JUCE의 표준 바이패스 기능을 지원하지 않는 경우
+                            juce::Logger::writeToLog("Plugin does not support bypass functionality");
+                        }
+                    }
+                }
+                
+                repaint();
+                return; // Bypass는 파라미터 업데이트 없이 리턴
+        }
+        
+        // 플러그인 파라미터 업데이트 (CC 21, 22, 23만)
         if (clearPlugin && paramIdx >= 0) {
             auto params = clearPlugin->getParameters();
-            if (paramIdx < params.size() && params[paramIdx])
+            if (paramIdx < params.size() && params[paramIdx]) {
                 params[paramIdx]->setValueNotifyingHost(value);
+                
+                // UI 노브 값도 업데이트
+                if (paramIdx == 1) { // vox
+                    if (knobValues.size() > 0) {
+                        knobValues[0] = value * 2.0f; // 0~2 범위로 변환
+                    }
+                } else if (paramIdx == 14) { // amb
+                    if (knobValues.size() > 1) {
+                        knobValues[1] = value * 2.0f; // 0~2 범위로 변환
+                    }
+                } else if (paramIdx == 12) { // v. rev
+                    if (knobValues.size() > 2) {
+                        knobValues[2] = value * 2.0f; // 0~2 범위로 변환
+                    }
+                }
+                repaint();
+            }
         }
     }
 
@@ -3156,6 +3254,12 @@ private:
     // 소멸 중 플래그 (콜백 안전성 보장)
     bool isBeingDeleted = false;
     bool isWindowMinimized = false; // 창 최소화 상태 추적
+    
+    // USB MIDI CC 모니터링 변수들
+    int Knob1 = 0;  // CC 21: 포텐셜미터 0~127값
+    int Knob2 = 0;  // CC 22: 포텐셜미터 0~127값
+    int Knob3 = 0;  // CC 23: 포텐셜미터 0~127값
+    bool Bypass = false;  // CC 24: True/False 값
     
     // MainWindow에서 접근할 수 있도록 friend 클래스 선언
     friend class MainWindow;
